@@ -174,7 +174,7 @@ module_param(poll_loopcount, uint, S_IRUGO);
 MODULE_PARM_DESC(poll_loopcount,
 		 "Maximum polling loop count. Default = 32");
 
-static unsigned __initdata use_dma = 1;
+static unsigned use_dma = 1;
 module_param(use_dma, uint, 0);
 MODULE_PARM_DESC(use_dma, "Whether to use DMA or not. Default = 1");
 
@@ -1118,7 +1118,7 @@ static inline void mmc_davinci_cpufreq_deregister(struct mmc_davinci_host *host)
 {
 }
 #endif
-static void __init init_mmcsd_host(struct mmc_davinci_host *host)
+static void init_mmcsd_host(struct mmc_davinci_host *host)
 {
 
 	mmc_davinci_reset_ctrl(host, 1);
@@ -1201,7 +1201,7 @@ static int mmc_davinci_parse_pdata(struct mmc_host *mmc)
 	return 0;
 }
 
-static int __init davinci_mmcsd_probe(struct platform_device *pdev)
+static int davinci_mmcsd_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
 	struct mmc_davinci_host *host = NULL;
@@ -1290,7 +1290,15 @@ static int __init davinci_mmcsd_probe(struct platform_device *pdev)
 		host->version = id_entry->driver_data;
 
 	mmc->ops = &mmc_davinci_ops;
-	mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
+	ret = mmc_regulator_get_supply(mmc);
+	if (ret) {
+		if (ret != -EPROBE_DEFER)
+			dev_err(&pdev->dev, "cannot get supply: %d\n", ret);
+		goto voltage_get_fail;
+	}
+
+	if (!mmc->ocr_avail)
+		mmc->ocr_avail = MMC_VDD_32_33 | MMC_VDD_33_34;
 
 	/* With no iommu coalescing pages, each phys_seg is a hw_seg.
 	 * Each hw_seg uses one EDMA parameter RAM slot, always one
@@ -1349,6 +1357,7 @@ request_irq_fail:
 mmc_add_host_fail:
 	mmc_davinci_cpufreq_deregister(host);
 cpu_freq_fail:
+voltage_get_fail:
 	davinci_release_dma_channels(host);
 parse_fail:
 dma_probe_defer:
@@ -1414,11 +1423,12 @@ static struct platform_driver davinci_mmcsd_driver = {
 		.pm	= davinci_mmcsd_pm_ops,
 		.of_match_table = davinci_mmc_dt_ids,
 	},
+	.probe		= davinci_mmcsd_probe,
 	.remove		= __exit_p(davinci_mmcsd_remove),
 	.id_table	= davinci_mmc_devtype,
 };
 
-module_platform_driver_probe(davinci_mmcsd_driver, davinci_mmcsd_probe);
+module_platform_driver(davinci_mmcsd_driver);
 
 MODULE_AUTHOR("Texas Instruments India");
 MODULE_LICENSE("GPL");
