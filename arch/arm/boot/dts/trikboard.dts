@@ -81,12 +81,6 @@
 					0x24 0x08000000 0x0f000000
 				>;
 			};
-			wifi_en_pin: pinmux_wifi_en {
-				pinctrl-single,bits = <
-					/* GP6[8] */
-					0x34 0x80000000 0xf0000000
-				>;
-			};
 			wifi_wl_en_pin: pinmux_wifi_wl_en {
 				pinctrl-single,bits = <
 					/* GP5[11] */
@@ -166,7 +160,7 @@
 				reg = <2>;
 				ref-clock-frequency = <38400000>;
 				interrupt-parent = <&gpio>;
-				interrupts = <105 IRQ_TYPE_LEVEL_HIGH>;
+				interrupts = <105 IRQ_TYPE_EDGE_RISING>;
 				status = "okay";
 			};
 		};
@@ -252,18 +246,6 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 		regulator-boot-on;
-	};
-	leds {
-		compatible = "gpio-leds";
-		pinctrl-names = "default";
-		pinctrl-0 = <&wifi_en_pin>;
-
-		/* Hack: turn on wifi power */
-		wifi_en {
-			label = "WIFI power regulator";
-			gpios = <&gpio 104 GPIO_ACTIVE_HIGH>;
-			default-state = "on";
-		};
 	};
 	wifi_vmmc: fixedregulator-wifi_wl_en {
 		compatible = "regulator-fixed";
