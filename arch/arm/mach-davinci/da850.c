@@ -796,6 +796,15 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, VPIF_DOUT15,	17,	8,	15,	1,	false)
 	MUX_CFG(DA850, VPIF_CLKO2,	19,	12,	15,	1,	false)
 	MUX_CFG(DA850, VPIF_CLKO3,	19,	20,	15,	1,	false)
+	/* GPIO/WIFI */
+	MUX_CFG(DA850, GPIO5_11,	11,	16,	15,	8,	false)
+	MUX_CFG(DA850, GPIO6_2,		19,	16,	15,	8,	false)
+	MUX_CFG(DA850, GPIO6_3,		19,	12,	15,	8,	false)
+	MUX_CFG(DA850, GPIO6_4,		19,	8,	15,	8,	false)
+	MUX_CFG(DA850, GPIO6_8,		13,	28,	15,	8,	false)
+	MUX_CFG(DA850, GPIO8_13,	18,	16,	15,	8,	false)
+	MUX_CFG(DA850, GPIO8_14,	18,	12,	15,	8,	false)
+	MUX_CFG(DA850, GPIO8_15,	18,	8,	15,	8,	false)
 #endif
 };
 

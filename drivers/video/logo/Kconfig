@@ -82,4 +82,8 @@ config LOGO_M32R_CLUT224
 	depends on M32R
 	default y
 
+config LOGO_TRIK_CLUT224
+	bool "TRIK 224-color Linux logo"
+	default n
+
 endif # LOGO

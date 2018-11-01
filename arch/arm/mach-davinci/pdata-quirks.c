@@ -16,6 +16,11 @@
 #include <mach/common.h>
 #include <mach/da8xx.h>
 
+#include <mach/mux.h>
+#include <linux/gpio.h>
+#include <linux/platform_data/gpio-davinci.h>
+#include <linux/delay.h>
+
 struct pdata_init {
 	const char *compatible;
 	void (*fn)(void);
@@ -191,6 +196,72 @@ static void __init da850_vpif_display_legacy_init_evm(void)
 			__func__, ret);
 }
 
+static const short da850_trik_wifi_sdio_pins[] = {
+	DA850_MMCSD1_DAT_0, DA850_MMCSD1_DAT_1, DA850_MMCSD1_DAT_2,
+	DA850_MMCSD1_DAT_3, DA850_MMCSD1_CLK, DA850_MMCSD1_CMD,
+	-1
+};
+
+static const short da850_trik_wifi_sdio_gpio_pins[] = {
+	DA850_GPIO8_15, DA850_GPIO6_2, DA850_GPIO6_3,
+	DA850_GPIO6_4, DA850_GPIO8_14, DA850_GPIO8_13,
+	DA850_GPIO5_11,
+	-1
+};
+
+void trik_wifi_set_power(int index, bool power_on)
+{
+	static bool power_state = 0;
+
+	if (power_on == power_state)
+		return;
+	power_state = power_on;
+
+	if (power_on) {
+		/* Power up sequence required for wl127x devices */
+		int ret;
+
+		/* HW BUG: no SDIO pull-up resistors. Use GPIO as workaround. */
+		ret = davinci_cfg_reg_list(da850_trik_wifi_sdio_gpio_pins);
+		if (ret)
+			pr_warning("%s: could not pinmux MMC/SD1 pins in GPIO mode: %d\n", __func__, ret);
+
+		gpio_direction_output(GPIO_TO_PIN(5,11), 0);
+		gpio_direction_output(GPIO_TO_PIN(6,2), 1);
+		gpio_direction_output(GPIO_TO_PIN(6,3), 1);
+		gpio_direction_output(GPIO_TO_PIN(6,4), 1);
+		gpio_direction_output(GPIO_TO_PIN(8,13), 1);
+		gpio_direction_output(GPIO_TO_PIN(8,14), 1);
+		gpio_direction_output(GPIO_TO_PIN(8,15), 1);
+
+		/* WL_EN must have 1 for at least 10ms, 0 for at least 64us, then stable 1 for at least 55ms */
+                gpio_set_value(GPIO_TO_PIN(5,11), 1);
+                msleep(10);
+                gpio_set_value(GPIO_TO_PIN(5,11), 0);
+                msleep(1);
+                gpio_set_value(GPIO_TO_PIN(5,11), 1);
+                msleep(55);
+
+                /* Unroll SDIO pull-up workaround */
+                ret = davinci_cfg_reg_list(da850_trik_wifi_sdio_pins);
+                if (ret)
+                        pr_warning("%s: could not pinmux MMC/SD1 pins in SDIO mode: %d\n", __func__, ret);
+
+        } else {
+		gpio_set_value(GPIO_TO_PIN(5,11), 0);
+	}
+}
+
+struct davinci_mmc_config trik_mmcsd1_platdata = {
+	.set_power = trik_wifi_set_power,
+};
+
+static void __init trik_init_wifi(void)
+{
+	davinci_cfg_reg(DA850_GPIO6_8);
+	gpio_direction_output(GPIO_TO_PIN(6,8), 1);
+}
+
 static void pdata_quirks_check(struct pdata_init *quirks)
 {
 	while (quirks->compatible) {
@@ -206,6 +277,7 @@ static struct pdata_init pdata_quirks[] __initdata = {
 	{ "ti,da850-lcdk", da850_vpif_capture_legacy_init_lcdk, },
 	{ "ti,da850-evm", da850_vpif_display_legacy_init_evm, },
 	{ "ti,da850-evm", da850_vpif_capture_legacy_init_evm, },
+	{ "ti,trikboard", trik_init_wifi, },
 	{ /* sentinel */ },
 };
 
