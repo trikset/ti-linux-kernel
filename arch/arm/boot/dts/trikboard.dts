@@ -229,6 +229,18 @@
 		gpio: gpio@226000 {
 			status = "okay";
 		};
+		usb0: usb@200000 {
+			dr_mode = "host";
+			status = "okay";
+		};
+		usb1: usb@225000 {
+			status = "okay";
+		};
+		cfgchip: chip-controller@1417c {
+			usb_phy: usb-phy {
+				status = "okay";
+			};
+		};
 	};
 	vbat: fixedregulator0 {
 		compatible = "regulator-fixed";
