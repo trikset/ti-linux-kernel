@@ -277,7 +277,7 @@ static struct pdata_init pdata_quirks[] __initdata = {
 	{ "ti,da850-lcdk", da850_vpif_capture_legacy_init_lcdk, },
 	{ "ti,da850-evm", da850_vpif_display_legacy_init_evm, },
 	{ "ti,da850-evm", da850_vpif_capture_legacy_init_evm, },
-	{ "ti,trikboard", trik_init_wifi, },
+	{ "ctl,trikboard", trik_init_wifi, },
 	{ /* sentinel */ },
 };
 
