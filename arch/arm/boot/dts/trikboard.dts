@@ -10,7 +10,7 @@
 /dts-v1/;
 #include "da850.dtsi"
 #include <dt-bindings/gpio/gpio.h>
-#include <../../../include/uapi/linux/input-event-codes.h>
+#include <dt-bindings/input/linux-event-codes.h>
 
 // cannot include include/linux/platform_data/gpio-davinci.h into a .dts  
 #define GPIO_TO_PIN(bank, gpio) (16 * (bank) + (gpio))
@@ -115,6 +115,18 @@
 					0x4c 0x02000022 0x0f0000ff
 				>;
 			};
+                        button_pins: pinmux_button_pins {
+                                pinctrl-single,bits = <
+                                       /* GP2[7], GP2[0] */
+                                       0x18 0x80000008 0xf000000f  
+                                       /* GP3[13], GP3[15], GP3[12] */
+                                       0x1C 0x00008808 0x0000ff0f 
+                                       /* GP3[4] */
+                                       0x20 0x00008000 0x0000f000 
+                                       /* GP1[9] */
+                                       0x08 0x04000000 0x0f000000 
+                               >;
+                       };
          	};
 		serial0: serial@42000 {
 			status = "okay";
@@ -125,6 +137,15 @@
 		serial2: serial@10d000 {
 			status = "okay";
 		};
+                ehrpwm0: pwm@300000 {
+                        pinctrl-names = "default";
+                        pinctrl-0 = <&ehrpwm0a_pins &ehrpwm0b_pins>; 
+                        status = "okay";
+                ehrpwm1: pwm@302000 {
+                        pinctrl-names = "default";
+                        pinctrl-0 = <&ehrpwm1a_pins &ehrpwm1b_pins>; 
+                        status = "okay";
+                }; 
 		rtc0: rtc@23000 {
 			status = "okay";
 		};
@@ -260,8 +281,10 @@
                         compatible = "gpio-keys";
                         #address-cells = <1>;
                         #size-cells = <0>;
+                        pinctrl-names = "default";
+                        pinctrl-0 = <&button_pins>;
                         autorepeat;
-                        sw1i  {
+                        sw1  {
                              label = "sw1";
                              gpios = <&gpio GPIO_TO_PIN(2, 7) GPIO_ACTIVE_LOW>;
                              linux,code = <KEY_POWER>; 
