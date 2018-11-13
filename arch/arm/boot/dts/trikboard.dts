@@ -109,12 +109,38 @@
 					/* LCD_D[8], LCD_D[9] */
 					0x48 0x00000022 0x000000ff
 
-					/* LCD_PCLK */
-					0x48 0x02000000 0x0f000000
+					/* LCD_PCLK, GP8[10] (reset)  */
+					0x48 0x82000000 0xff000000
 					/* LCD_AC_ENB_CS, LCD_VSYNC, LCD_HSYNC */
 					0x4c 0x02000022 0x0f0000ff
+                                        /* GP6[12] (backlight) */ 
+                                        0x34 0x00008000 0x0000f000 
+                                        
 				>;
 			};
+                        /* pins to enable power_connectors and the voltage translators ,
+                           reset and program and interrupt pin for the MSP, resets for the video modules,
+                           LCD backlight 
+                           JD ports controls 
+                           some "GPIO" PCB signals 
+                        */
+                        gpios_to_userspace: pinmux_gpios_to_userspace {
+                                pinctrl-single,bits = <
+                                /* GP5[14], 5[13], 5[9, 8, 7, 6, 5, 4, 3, 0] */
+                                0x2c 0x88000880 0xff000ff0
+                                0x30 0x80088888 0xf00fffff 
+                                /* GP3[7, 5, 3, 2, 1] */
+                                0x20 0x08880808 0x0fff0f0f
+                                /* GP2[5, 4, 3, 2, 1] */ 
+                                0x18 0x08888800 0x0fffff00 
+                                /* GP6[13] */  
+                                0x34 0x00000800 0x00000f00 
+                                /* 1[12, 11, 10] */
+                                0x08 0x00444000 0x00fff000
+                                /* GP0[0, 2, 3, 4] */
+                                0x04 0x80888000 0xf0fff000 
+                                >; 
+                        };
                         button_pins: pinmux_button_pins {
                                 pinctrl-single,bits = <
                                        /* GP2[7], GP2[0] */
@@ -139,8 +165,9 @@
 		};
                 ehrpwm0: pwm@300000 {
                         pinctrl-names = "default";
-                        pinctrl-0 = <&ehrpwm0a_pins &ehrpwm0b_pins>; 
+                        pinctrl-0 = <&ehrpwm0b_pins>; 
                         status = "okay";
+                }; 
                 ehrpwm1: pwm@302000 {
                         pinctrl-names = "default";
                         pinctrl-0 = <&ehrpwm1a_pins &ehrpwm1b_pins>; 
@@ -274,6 +301,8 @@
 			bus_freq = <2200000>;
 		};
 		gpio: gpio@226000 {
+                  /*      pinctrl-names = "default";
+                        pinctrl-0 = <&gpios_to_userspace>; */
 			status = "okay";
 		};
 
@@ -282,7 +311,7 @@
                         #address-cells = <1>;
                         #size-cells = <0>;
                         pinctrl-names = "default";
-                        pinctrl-0 = <&button_pins>;
+                        pinctrl-0 = <&button_pins &gpios_to_userspace>;
                         autorepeat;
                         sw1  {
                              label = "sw1";
