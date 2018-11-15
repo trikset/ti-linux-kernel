@@ -137,8 +137,8 @@
                                 0x34 0x00000800 0x00000f00 
                                 /* 1[12, 11, 10] */
                                 0x08 0x00444000 0x00fff000
-                                /* GP0[0, 2, 3, 4] */
-                                0x04 0x80888000 0xf0fff000 
+                                /* GP0[2, 3, 4] */
+                                0x04 0x00888000 0x00fff000 
                                 >; 
                         };
                         button_pins: pinmux_button_pins {
@@ -173,6 +173,21 @@
                         pinctrl-0 = <&ehrpwm1a_pins &ehrpwm1b_pins>; 
                         status = "okay";
                 }; 
+                ecap0: ecap@306000 {
+                        pinctrl-names = "default";
+			pinctrl-0 = <&ecap0_pins>; 
+		        status = "okay";
+                };
+                ecap1: ecap@307000 {
+                        pinctrl-names = "default";
+			pinctrl-0 = <&ecap1_pins>; 
+		        status = "okay";
+                };
+                ecap2: ecap@308000 {
+                        pinctrl-names = "default";
+			pinctrl-0 = <&ecap2_pins>; 
+		        status = "okay";
+                };
 		rtc0: rtc@23000 {
 			status = "okay";
 		};
