@@ -10,6 +10,11 @@
 /dts-v1/;
 #include "da850.dtsi"
 #include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+
+// cannot include include/linux/platform_data/gpio-davinci.h into a .dts
+#define GPIO_TO_PIN(bank, gpio) (16 * (bank) + (gpio))
+
 
 / {
 	compatible = "ctl,trikboard", "ti,da850";
@@ -89,6 +94,38 @@
 					0x2c 0x00080000 0x000f0000
 				>;
 			};
+			button_pins: pinmux_button_pins {
+				pinctrl-single,bits = <
+					/* GP2[7], GP2[0] */
+					0x18 0x80000008 0xf000000f
+					/* GP3[13], GP3[15], GP3[12] */
+					0x1C 0x00008808 0x0000ff0f
+					/* GP3[4] */
+					0x20 0x00008000 0x0000f000
+					/* GP1[9] */
+					0x08 0x04000000 0x0f000000
+				>;
+			};
+			lcd_gpio_pins: pinmux_lcd_pins {
+				pinctrl-single,bits = <
+					/* LCD_BACKLIGHT */
+					0x34 0x00008000 0x0000f000
+					/*
+					 * LCD_D[2], LCD_D[3], LCD_D[4], LCD_D[5],
+					 * LCD_D[6], LCD_D[7]
+					 */
+					0x40 0x88888800 0xffffff00
+					/*
+					 * LCD_D[10], LCD_D[11], LCD_D[12], LCD_D[13],
+					 * LCD_D[14], LCD_D[15], LCD_D[0], LCD_D[1]
+					 */
+					0x44 0x88888888 0xffffffff
+					/* LCD_RESET, LCD_RD, LCD_D[8], LCD_D[9] */
+					0x48 0x88000088 0xff0000ff
+					/* LCD_CS, LCD_RS, LCD_WR */
+					0x4c 0x08000088 0x0f0000ff
+				>;
+			};
 		};
 		serial0: serial@42000 {
 			status = "okay";
@@ -97,6 +134,31 @@
 			status = "okay";
 		};
 		serial2: serial@10d000 {
+			status = "okay";
+		};
+		ehrpwm0: pwm@300000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ehrpwm0b_pins>;
+			status = "okay";
+		};
+		ehrpwm1: pwm@302000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ehrpwm1a_pins &ehrpwm1b_pins>;
+			status = "okay";
+		};
+		ecap0: ecap@306000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap0_pins>;
+			status = "okay";
+		};
+		ecap1: ecap@307000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap1_pins>;
+			status = "okay";
+		};
+		ecap2: ecap@308000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap2_pins>;
 			status = "okay";
 		};
 		rtc0: rtc@23000 {
@@ -229,6 +291,63 @@
 		gpio: gpio@226000 {
 			status = "okay";
 		};
+		gpio-keys {
+			compatible = "gpio-keys";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&button_pins>;
+			autorepeat;
+			sw1 {
+				label = "sw1";
+				gpios = <&gpio GPIO_TO_PIN(2, 7) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_POWER>;
+				gpio-key;
+				autorepeat;
+			};
+			sw2 {
+				label = "sw2";
+				gpios = <&gpio GPIO_TO_PIN(3, 4) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_UP>;
+				gpio-key;
+				autorepeat;
+			};
+			sw3 {
+				label = "sw3";
+				gpios = <&gpio GPIO_TO_PIN(2, 0) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_ESC>;
+				gpio-key;
+				autorepeat;
+			};
+			sw4 {
+				label = "sw4";
+				gpios = <&gpio GPIO_TO_PIN(1, 9) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_LEFT>;
+				gpio-key;
+				autorepeat;
+			};
+			sw5 {
+				label = "sw5";
+				gpios = <&gpio GPIO_TO_PIN(3, 15) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_RIGHT>;
+				gpio-key;
+				autorepeat;
+			};
+			sw6 {
+				label = "sw6";
+				gpios = <&gpio GPIO_TO_PIN(3, 13) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_DOWN>;
+				gpio-key;
+				autorepeat;
+			};
+			sw7 {
+				label = "sw7";
+				gpios = <&gpio GPIO_TO_PIN(3, 12) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_ENTER>;
+				gpio-key;
+				autorepeat;
+			};
+		};
 		usb0: usb@200000 {
 			dr_mode = "host";
 			status = "okay";
@@ -240,6 +359,42 @@
 			usb_phy: usb-phy {
 				status = "okay";
 			};
+		};
+		display {
+			compatible = "sitronix,st7789v";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lcd_gpio_pins>;
+
+			/* Driver hack: ACTIVE_<VAL> gpio is treated as INITIAL_<VAL> */
+			reset-gpios = <&gpio 138 GPIO_ACTIVE_HIGH>;
+			dc-gpios = <&gpio 136 GPIO_ACTIVE_LOW>;
+			rd-gpios = <&gpio 139 GPIO_ACTIVE_HIGH>;
+			wr-gpios = <&gpio 137 GPIO_ACTIVE_HIGH>;
+			cs-gpios = <&gpio 96 GPIO_ACTIVE_HIGH>;
+			db-gpios = <
+				&gpio 120 GPIO_ACTIVE_LOW
+				&gpio 121 GPIO_ACTIVE_LOW
+				&gpio 122 GPIO_ACTIVE_LOW
+				&gpio 123 GPIO_ACTIVE_LOW
+				&gpio 124 GPIO_ACTIVE_LOW
+				&gpio 125 GPIO_ACTIVE_LOW
+				&gpio 126 GPIO_ACTIVE_LOW
+				&gpio 127 GPIO_ACTIVE_LOW
+				&gpio 112 GPIO_ACTIVE_LOW
+				&gpio 113 GPIO_ACTIVE_LOW
+				&gpio 114 GPIO_ACTIVE_LOW
+				&gpio 115 GPIO_ACTIVE_LOW
+				&gpio 116 GPIO_ACTIVE_LOW
+				&gpio 117 GPIO_ACTIVE_LOW
+				&gpio 118 GPIO_ACTIVE_LOW
+				&gpio 119 GPIO_ACTIVE_LOW
+			>;
+			led-gpios = <&gpio 108 GPIO_ACTIVE_LOW>;
+
+			buswidth = <16>;
+			regwidth = <16>;
+			backlight = <1>;
+			status = "okay";
 		};
 	};
 	vbat: fixedregulator0 {
