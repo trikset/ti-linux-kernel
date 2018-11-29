@@ -106,6 +106,26 @@
 					0x08 0x04000000 0x0f000000
 				>;
 			};
+			lcd_gpio_pins: pinmux_lcd_pins {
+				pinctrl-single,bits = <
+					/* LCD_BACKLIGHT */
+					0x34 0x00008000 0x0000f000
+					/*
+					 * LCD_D[2], LCD_D[3], LCD_D[4], LCD_D[5],
+					 * LCD_D[6], LCD_D[7]
+					 */
+					0x40 0x88888800 0xffffff00
+					/*
+					 * LCD_D[10], LCD_D[11], LCD_D[12], LCD_D[13],
+					 * LCD_D[14], LCD_D[15], LCD_D[0], LCD_D[1]
+					 */
+					0x44 0x88888888 0xffffffff
+					/* LCD_RESET, LCD_RD, LCD_D[8], LCD_D[9] */
+					0x48 0x88000088 0xff0000ff
+					/* LCD_CS, LCD_RS, LCD_WR */
+					0x4c 0x08000088 0x0f0000ff
+				>;
+			};
 		};
 		serial0: serial@42000 {
 			status = "okay";
@@ -339,6 +359,42 @@
 			usb_phy: usb-phy {
 				status = "okay";
 			};
+		};
+		display {
+			compatible = "sitronix,st7789v";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lcd_gpio_pins>;
+
+			/* Driver hack: ACTIVE_<VAL> gpio is treated as INITIAL_<VAL> */
+			reset-gpios = <&gpio 138 GPIO_ACTIVE_HIGH>;
+			dc-gpios = <&gpio 136 GPIO_ACTIVE_LOW>;
+			rd-gpios = <&gpio 139 GPIO_ACTIVE_HIGH>;
+			wr-gpios = <&gpio 137 GPIO_ACTIVE_HIGH>;
+			cs-gpios = <&gpio 96 GPIO_ACTIVE_HIGH>;
+			db-gpios = <
+				&gpio 120 GPIO_ACTIVE_LOW
+				&gpio 121 GPIO_ACTIVE_LOW
+				&gpio 122 GPIO_ACTIVE_LOW
+				&gpio 123 GPIO_ACTIVE_LOW
+				&gpio 124 GPIO_ACTIVE_LOW
+				&gpio 125 GPIO_ACTIVE_LOW
+				&gpio 126 GPIO_ACTIVE_LOW
+				&gpio 127 GPIO_ACTIVE_LOW
+				&gpio 112 GPIO_ACTIVE_LOW
+				&gpio 113 GPIO_ACTIVE_LOW
+				&gpio 114 GPIO_ACTIVE_LOW
+				&gpio 115 GPIO_ACTIVE_LOW
+				&gpio 116 GPIO_ACTIVE_LOW
+				&gpio 117 GPIO_ACTIVE_LOW
+				&gpio 118 GPIO_ACTIVE_LOW
+				&gpio 119 GPIO_ACTIVE_LOW
+			>;
+			led-gpios = <&gpio 108 GPIO_ACTIVE_LOW>;
+
+			buswidth = <16>;
+			regwidth = <16>;
+			backlight = <1>;
+			status = "okay";
 		};
 	};
 	vbat: fixedregulator0 {
