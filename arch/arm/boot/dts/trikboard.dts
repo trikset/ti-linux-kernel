@@ -116,6 +116,31 @@
 		serial2: serial@10d000 {
 			status = "okay";
 		};
+		ehrpwm0: pwm@300000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ehrpwm0b_pins>;
+			status = "okay";
+		};
+		ehrpwm1: pwm@302000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ehrpwm1a_pins &ehrpwm1b_pins>;
+			status = "okay";
+		};
+		ecap0: ecap@306000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap0_pins>;
+			status = "okay";
+		};
+		ecap1: ecap@307000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap1_pins>;
+			status = "okay";
+		};
+		ecap2: ecap@308000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap2_pins>;
+			status = "okay";
+		};
 		rtc0: rtc@23000 {
 			status = "okay";
 		};
