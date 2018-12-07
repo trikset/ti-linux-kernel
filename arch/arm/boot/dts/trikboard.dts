@@ -106,7 +106,7 @@
 					0x08 0x04000000 0x0f000000
 				>;
 			};
-			lcd_gpio_pins: pinmux_lcd_pins {
+			lcd_gpio_pins: pinmux_lcd_gpio_pins {
 				pinctrl-single,bits = <
 					/* LCD_BACKLIGHT */
 					0x34 0x00008000 0x0000f000
@@ -124,6 +124,26 @@
 					0x48 0x88000088 0xff0000ff
 					/* LCD_CS, LCD_RS, LCD_WR */
 					0x4c 0x08000088 0x0f0000ff
+				>;
+			};
+			lcd_tilcdc_pins: pinmux_lcd_tilcdc_pins {
+				pinctrl-single,bits = <
+					/* LCD_BACKLIGHT */
+					0x34 0x00008000 0x0000f000
+					/*
+					 * LCD_D[2], LCD_D[3], LCD_D[4], LCD_D[5],
+					 * LCD_D[6], LCD_D[7]
+					 */
+					0x40 0x22222200 0xffffff00
+					/*
+					 * LCD_D[10], LCD_D[11], LCD_D[12], LCD_D[13],
+					 * LCD_D[14], LCD_D[15], LCD_D[0], LCD_D[1]
+					 */
+					0x44 0x22222222 0xffffffff
+					/* LCD_RESET, LCD_RD, LCD_D[8], LCD_D[9] */
+					0x48 0x82000022 0xff0000ff
+					/* LCD_CS, LCD_RS, LCD_WR */
+					0x4c 0x02000022 0x0f0000ff
 				>;
 			};
 		};
@@ -360,7 +380,7 @@
 				status = "okay";
 			};
 		};
-		display {
+		display-gpio {
 			compatible = "sitronix,st7789v";
 			pinctrl-names = "default";
 			pinctrl-0 = <&lcd_gpio_pins>;
@@ -389,6 +409,20 @@
 				&gpio 118 GPIO_ACTIVE_LOW
 				&gpio 119 GPIO_ACTIVE_LOW
 			>;
+			led-gpios = <&gpio 108 GPIO_ACTIVE_LOW>;
+
+			buswidth = <16>;
+			regwidth = <16>;
+			backlight = <1>;
+			status = "disabled";
+		};
+		display-tilcdc {
+			compatible = "sitronix,st7789v-tilcdc";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lcd_tilcdc_pins>;
+
+			/* Driver hack: ACTIVE_<VAL> gpio is treated as INITIAL_<VAL> */
+			reset-gpios = <&gpio 138 GPIO_ACTIVE_HIGH>;
 			led-gpios = <&gpio 108 GPIO_ACTIVE_LOW>;
 
 			buswidth = <16>;
