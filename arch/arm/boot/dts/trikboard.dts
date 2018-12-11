@@ -76,7 +76,7 @@
 					0x30 0x01100000  0x0ff00000
 				>;
 			};
-			spi1_cs1_pin: pinmux_spi1_cs1 {
+			spi1_cs0_pin: pinmux_spi1_cs0 {
 				pinctrl-single,bits = <
 					/* GP4[9] */
 					0x24 0x08000000 0x0f000000
@@ -138,6 +138,18 @@
 					0x48 0x82000022 0xff0000ff
 					/* LCD_CS, LCD_RS, LCD_WR */
 					0x4c 0x02000022 0x0f0000ff
+				>;
+			};
+			gyro_pins: pinmux_gyro_pins {
+				pinctrl-single,bits = <
+					/* INT1 (GP2[8]) and DRDY(GP2[9]) */
+					0x14 0x88000000 0xff000000
+				>;
+			};
+			accel_pins: pinmux_accel_pins {
+				pinctrl-single,bits = <
+					/* INT1 (GP5[3]) and INT2 (GP5[4]) */
+					0x30 0x00088000 0x000ff000
 				>;
 			};
 		};
@@ -204,7 +216,13 @@
 			};
 			mma845x: mma845x@1c {
 				compatible = "fsl,mma8451";
+				pinctrl-names = "default";
+				pinctrl-0 = <&accel_pins>;
 				reg = <0x1c>;
+				interrupt-parent = <&gpio>;
+				/* INT1 is connected but left unused */
+				interrupts = <84 IRQ_TYPE_EDGE_FALLING>;
+				interrupt-names = "INT2";
 				status = "okay";
 			};
 			ds4420: ds4420@50 {
@@ -286,12 +304,21 @@
 		spi1: spi@30e000 {
 			status = "okay";
 			pinctrl-names = "default";
-			pinctrl-0 = <&spi1_pins &spi1_cs1_pin>;
-			cs-gpios = <&gpio 73 0>;
+			pinctrl-0 = <&spi1_pins &spi1_cs0_pin>;
+			cs-gpios = <&gpio 73 GPIO_ACTIVE_HIGH>;
+			num-cs = <1>;
 			l3gd20: l3gd20@0 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&gyro_pins>;
 				compatible = "st,l3gd20-gyro";
 				spi-max-frequency = <10000000>;
 				reg = <0>;
+				st,drdy-int-pin = <2>;
+				interrupt-parent = <&gpio>;
+				interrupts = <
+					41 IRQ_TYPE_EDGE_RISING /* DRDY */
+					40 IRQ_TYPE_EDGE_RISING /* INT1 */
+					>;
 			};
 		};
 		mdio: mdio@224000 {
