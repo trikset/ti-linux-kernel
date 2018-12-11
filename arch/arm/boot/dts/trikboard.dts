@@ -88,6 +88,12 @@
 					0x2c 0x00080000 0x000f0000
 				>;
 			};
+			bluetooth_en_pin: pinmux_bluetooth_en {
+				pinctrl-single,bits = <
+					/* GP6[11] */
+					0x34 0x00080000 0x000f0000
+				>;
+			};
 			button_pins: pinmux_button_pins {
 				pinctrl-single,bits = <
 					/* GP2[7], GP2[0] */
@@ -155,6 +161,16 @@
 		};
 		serial0: serial@42000 {
 			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&serial0_rxtx_pins &serial0_rtscts_pins &bluetooth_en_pin>;
+			auto-flow-control;
+			no-loopback-test;
+
+			bluetooth {
+				compatible = "ti,wl1271-st";
+				enable-gpios = <&gpio 107 GPIO_ACTIVE_HIGH>;
+				status = "okay";
+			};
 		};
 		serial1: serial@10c000 {
 			status = "okay";
