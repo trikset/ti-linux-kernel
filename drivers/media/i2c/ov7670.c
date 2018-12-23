@@ -270,6 +270,8 @@ struct regval_list {
 
 static struct regval_list ov7670_default_regs[] = {
 	{ REG_COM7, COM7_RESET },
+	{ REG_COM1, (1 << 6) },	/* CCIR601 enable */
+	{ REG_COM15, COM15_R01FE }, // Output range: 01 to FE
 /*
  * Clock scale: 3 = 15fps
  *              2 = 20fps
@@ -399,8 +401,6 @@ static struct regval_list ov7670_default_regs[] = {
 static struct regval_list ov7670_fmt_yuv422[] = {
 	{ REG_COM7, 0x0 },  /* Selects YUV mode */
 	{ REG_RGB444, 0 },	/* No RGB444 please */
-	{ REG_COM1, 0 },	/* CCIR601 */
-	{ REG_COM15, COM15_R00FF },
 	{ REG_COM9, 0x48 }, /* 32x gain ceiling; 0x8 is reserved bit */
 	{ 0x4f, 0x80 }, 	/* "matrix coefficient 1" */
 	{ 0x50, 0x80 }, 	/* "matrix coefficient 2" */
@@ -415,8 +415,8 @@ static struct regval_list ov7670_fmt_yuv422[] = {
 static struct regval_list ov7670_fmt_rgb565[] = {
 	{ REG_COM7, COM7_RGB },	/* Selects RGB mode */
 	{ REG_RGB444, 0 },	/* No RGB444 please */
-	{ REG_COM1, 0x0 },	/* CCIR601 */
-	{ REG_COM15, COM15_RGB565 },
+	{ REG_COM1, (1 << 6) },	/* CCIR601 enable */
+	{ REG_COM15, COM15_RGB565 | COM15_R01FE },
 	{ REG_COM9, 0x38 }, 	/* 16x gain ceiling; 0x8 is reserved bit */
 	{ 0x4f, 0xb3 }, 	/* "matrix coefficient 1" */
 	{ 0x50, 0xb3 }, 	/* "matrix coefficient 2" */
@@ -431,7 +431,7 @@ static struct regval_list ov7670_fmt_rgb565[] = {
 static struct regval_list ov7670_fmt_rgb444[] = {
 	{ REG_COM7, COM7_RGB },	/* Selects RGB mode */
 	{ REG_RGB444, R444_ENABLE },	/* Enable xxxxrrrr ggggbbbb */
-	{ REG_COM1, 0x0 },	/* CCIR601 */
+	{ REG_COM1, (1 << 6) },	/* CCIR601 enable */
 	{ REG_COM15, COM15_R01FE|COM15_RGB565 }, /* Data range needed? */
 	{ REG_COM9, 0x38 }, 	/* 16x gain ceiling; 0x8 is reserved bit */
 	{ 0x4f, 0xb3 }, 	/* "matrix coefficient 1" */
@@ -698,7 +698,81 @@ static struct regval_list ov7670_qcif_regs[] = {
 	{ 0xff, 0xff },
 };
 
+static struct regval_list ov7670_my_qvga_regs[] = { 
+// set QVGA according to
+// Table 2-2. (but without input clock divider
+// and without SCALING_PCLK_DELAY)
+// OV7670/OV7171 CMOS VGA (640x480) CameraChip��™
+// Implementation Guide
+// 0x70 0x71 0x72 are already set in the section 
+//  "mystery scaling numbers" above 
+ { REG_COM3, 4 },
+  { REG_COM14, COM14_DCWEN | 9 }, 
+  { 0x73, 0xf1 }, 
+// this was set to 2 in the guide, but it makes
+// image width less that 320. Setting this to 0
+// helps but may spoil left/right boundary of
+// the video
+  {0xa2, 0x00},
+
+// I forgot why do I do that? 
+   { REG_TSLB, 0x8 }, 
+//# make the original window (before downsampling)
+//# 6 pixels wider in order to reach 320 pixel width
+//# at the output. Use reg 0x32 for that
+   { 0x32,  0xb0 },  // 0xb0 = 0x80 + (6 << 3)
+
+  { 0xff, 0xff }, 
+};
+
+static struct regval_list regs_from_the_script[] = {
+  { 0x12, 0x80 }, 
+  { 0x12, 0x00 }, 
+  { 0x04, 0x40 }, 
+  { 0x40, 0x80 }, 
+  { 0x15, 0x00 }, 
+  { 0x12, 0 }, 
+  { 0xc, 4 }, 
+  { 0x3e, 0x19 }, 
+  { 0x70, 0x3A }, 
+  { 0x71, 0x35 }, 
+  { 0x72, 0x11 }, 
+  { 0x73, 0xf1 }, 
+  { 0xa2, 0x00 }, 
+  { 0x3a, 0x8 }, 
+  { 0x32, 0xb0 }, 
+  { 0xb0, 0x84 }, 
+  { 0x09, 0x03 }, 
+  { 0x14, 0x1a }, 
+  { 0x13, 0x87 }, 
+  { 0x6f, 0x6f }, 
+  { 0xa5, 0x05 }, 
+  { 0x24, 0x95 }, 
+  { 0x25, 0x33 }, 
+  { 0x26, 0xe3 }, 
+  { 0x9f, 0x78 }, 
+  { 0xa0, 0x68 }, 
+  { 0xa6, 0xd8 }, 
+  { 0xa7, 0xd8 }, 
+  { 0xa9, 0x90 }, 
+  { 0xaa, 0x94 }, 
+  { 0x9d, 0x98 }, 
+  { 0x9e, 0x7f }, 
+  { 0xa5, 0x02 }, 
+  { 0xab, 0x03 }, 
+  { 0x3b, 0x12 }, 
+  { 0x41, 0x0a }, 
+  { 0x4f, 0x80 }, 
+  { 0x50, 0x70 }, 
+  { 0x51, 0x1a }, 
+  { 0x52, 0x28 }, 
+  { 0x53, 0x15 }, 
+  { 0x54, 0x40 }, 
+  { 0xff, 0xff }, 
+};
+
 static struct ov7670_win_size ov7670_win_sizes[] = {
+#if 0 
 	/* VGA */
 	{
 		.width		= VGA_WIDTH,
@@ -721,17 +795,19 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
 		.vstop		= 494,
 		.regs		= NULL,
 	},
+#endif
 	/* QVGA */
 	{
 		.width		= QVGA_WIDTH,
 		.height		= QVGA_HEIGHT,
-		.com7_bit	= COM7_FMT_QVGA,
+		.com7_bit	= 0,
 		.hstart		= 168,	/* Empirically determined */
 		.hstop		=  24,
 		.vstart		=  12,
 		.vstop		= 492,
-		.regs		= NULL,
+		.regs		= ov7670_my_qvga_regs,
 	},
+#if 0 
 	/* QCIF */
 	{
 		.width		= QCIF_WIDTH,
@@ -743,6 +819,7 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
 		.vstop		= 494,
 		.regs		= ov7670_qcif_regs,
 	}
+#endif 
 };
 
 static struct ov7670_win_size ov7675_win_sizes[] = {
@@ -988,6 +1065,8 @@ static int ov7670_set_fmt(struct v4l2_subdev *sd,
 	unsigned char com7;
 	int ret;
 
+pr_err("!!!ov7670_set_fmt called %ix%i!\n", format->format.width, format->format.height); 
+
 	if (format->pad)
 		return -EINVAL;
 
@@ -1003,12 +1082,18 @@ static int ov7670_set_fmt(struct v4l2_subdev *sd,
 
 	if (ret)
 		return ret;
+
+pr_err("!!!setting sensor res to %ix%i = (%i-%i)x(%i-%i)!\n", 
+        wsize -> width, wsize -> height, 
+        wsize->hstart, wsize->hstop, wsize->vstart, wsize -> vstop); 
+
 	/*
 	 * COM7 is a pain in the ass, it doesn't like to be read then
 	 * quickly written afterward.  But we have everything we need
 	 * to set it absolutely here, as long as the format-specific
 	 * register sets list it first.
 	 */
+#if 0 
 	com7 = ovfmt->regs[0].value;
 	com7 |= wsize->com7_bit;
 	ov7670_write(sd, REG_COM7, com7);
@@ -1018,9 +1103,15 @@ static int ov7670_set_fmt(struct v4l2_subdev *sd,
 	ov7670_write_array(sd, ovfmt->regs + 1);
 	ov7670_set_hw(sd, wsize->hstart, wsize->hstop, wsize->vstart,
 			wsize->vstop);
+#endif
 	ret = 0;
+#if 0 
 	if (wsize->regs)
 		ret = ov7670_write_array(sd, wsize->regs);
+#endif
+
+ov7670_write_array(sd, regs_from_the_script); 
+
 	info->fmt = ovfmt;
 
 	/*
@@ -1033,8 +1124,11 @@ static int ov7670_set_fmt(struct v4l2_subdev *sd,
 	 * to write it unconditionally, and that will make the frame
 	 * rate persistent too.
 	 */
+#if 0 
 	if (ret == 0)
 		ret = ov7670_write(sd, REG_CLKRC, info->clkrc);
+#endif
+
 	return 0;
 }
 
@@ -1586,6 +1680,8 @@ static int ov7670_probe(struct i2c_client *client,
 	sd = &info->sd;
 	v4l2_i2c_subdev_init(sd, client, &ov7670_ops);
 
+pr_err("ov7670 sd = %p\n", sd); 
+
 	info->clock_speed = 30; /* default: a guess */
 	if (client->dev.platform_data) {
 		struct ov7670_config *config = client->dev.platform_data;
@@ -1613,18 +1709,25 @@ static int ov7670_probe(struct i2c_client *client,
 	}
 
 	info->clk = devm_clk_get(&client->dev, "xclk");
-	if (IS_ERR(info->clk))
+	if (IS_ERR(info->clk)) {
+                pr_err("info->clk\n"); 
 		return PTR_ERR(info->clk);
+        }
 	ret = clk_prepare_enable(info->clk);
-	if (ret)
+	if (ret) {
+                pr_err("clk_prepare_enable\n"); 
 		return ret;
+        }
 
 	ret = ov7670_init_gpio(client, info);
-	if (ret)
+	if (ret) {
+                pr_err("ov7670_init_gpio\n"); 
 		goto clk_disable;
+        }
 
 	info->clock_speed = clk_get_rate(info->clk) / 1000000;
 	if (info->clock_speed < 10 || info->clock_speed > 48) {
+                pr_err("bad speed : %i\n", info->clock_speed);
 		ret = -EINVAL;
 		goto clk_disable;
 	}
@@ -1691,6 +1794,7 @@ static int ov7670_probe(struct i2c_client *client,
 	v4l2_ctrl_handler_setup(&info->hdl);
 
 	ret = v4l2_async_register_subdev(&info->sd);
+pr_err("ov7670: subdev name %s, ops %p\n", sd -> name, sd -> ops); 
 	if (ret < 0)
 		goto hdl_free;
 
