@@ -262,6 +262,13 @@ static void __init trik_init_wifi(void)
 	gpio_direction_output(GPIO_TO_PIN(6,8), 1);
 }
 
+static void __init trik_init_clkout(void)
+{
+	/* Values after reset for CLKOUT clock are OK.
+	 * Just configure pinmux. */
+	davinci_cfg_reg(DA850_CLKOUT);
+}
+
 static void pdata_quirks_check(struct pdata_init *quirks)
 {
 	while (quirks->compatible) {
@@ -278,6 +285,7 @@ static struct pdata_init pdata_quirks[] __initdata = {
 	{ "ti,da850-evm", da850_vpif_display_legacy_init_evm, },
 	{ "ti,da850-evm", da850_vpif_capture_legacy_init_evm, },
 	{ "ctl,trikboard", trik_init_wifi, },
+	{ "ctl,trikboard", trik_init_clkout, },
 	{ /* sentinel */ },
 };
 

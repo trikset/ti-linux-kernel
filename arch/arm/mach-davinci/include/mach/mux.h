@@ -980,6 +980,9 @@ enum davinci_da850_index {
 	DA850_GPIO8_13,
 	DA850_GPIO8_14,
 	DA850_GPIO8_15,
+
+	/* Perif clock */
+	DA850_CLKOUT,
 };
 
 #define PINMUX(x)		(4 * (x))

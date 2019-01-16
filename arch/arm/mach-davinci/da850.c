@@ -805,6 +805,8 @@ static const struct mux_config da850_pins[] = {
 	MUX_CFG(DA850, GPIO8_13,	18,	16,	15,	8,	false)
 	MUX_CFG(DA850, GPIO8_14,	18,	12,	15,	8,	false)
 	MUX_CFG(DA850, GPIO8_15,	18,	8,	15,	8,	false)
+	/* OBSCLK */
+	MUX_CFG(DA850, CLKOUT,		13,	4,	15,	1,	false)
 #endif
 };
 
