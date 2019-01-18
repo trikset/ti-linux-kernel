@@ -53,14 +53,17 @@
 			};
 			mcasp0_pins: pinmux_mcasp0_pins {
 				pinctrl-single,bits = <
-					/*
-					 * AHCLKX, ACLKX, AFSX, AHCLKR, ACLKR,
-					 * AFSR, AMUTE
-					 */
-					0x00 0x11111111 0xffffffff
-					/* AXR11, AXR12 */
-					0x04 0x00011000 0x000ff000
+					/* * AHCLKX, AFSX, ACLKX */
+					0x00 0x00101010 0x00f0f0f0
+					/* AXR9 */
+					0x04 0x01000000 0x0f000000
+					/* AXR7 */
+					0x08 0x00000001 0x0000000f
 				>;
+			};
+			tlv320_reset_pin: pinmux_tlv320_reset_pin {
+				/* GP6[15] */
+				pinctrl-single,bits = <0x34 0x00000008 0x0000000f>;
 			};
 			nand_pins: nand_pins {
 				pinctrl-single,bits = <
@@ -223,12 +226,19 @@
 				compatible = "ti,tlv320aic3106";
 				reg = <0x18>;
 				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&tlv320_reset_pin>;
 
 				/* Regulators */
 				IOVDD-supply = <&cr_3_3>;
 				AVDD-supply = <&cr_3_3>;
 				DRVDD-supply = <&cr_3_3>;
 				DVDD-supply = <&cr_1_8>;
+
+				ai3x-micbias-vg = <1>; /* Bias 2V */
+
+				/* Reset pin*/
+				gpio-reset = <&gpio 111 GPIO_ACTIVE_HIGH>;
 			};
 			mma845x: mma845x@1c {
 				compatible = "fsl,mma8451";
@@ -501,15 +511,18 @@
 
 	sound {
 		compatible = "simple-audio-card";
-		simple-audio-card,name = "DA850/OMAP-L138 EVM";
+		simple-audio-card,name = "DA850/OMAP-L138 TRIK";
 		simple-audio-card,widgets =
-			"Line", "Line In",
-			"Line", "Line Out";
+			"Microphone", "Stereo Mic",
+			"Line", "Speaker",
+			"Headphone", "Headphone Jack";
 		simple-audio-card,routing =
-			"LINE1L", "Line In",
-			"LINE1R", "Line In",
-			"Line Out", "LLOUT",
-			"Line Out", "RLOUT";
+			"LINE2L", "Stereo Mic",
+			"LINE2R", "Stereo Mic",
+			"Stereo Mic", "Mic Bias",
+			"Speaker", "LLOUT",
+			"Headphone Jack", "HPROUT",
+			"Headphone Jack", "HPLOUT";
 		simple-audio-card,format = "dsp_b";
 		simple-audio-card,bitclock-master = <&link0_codec>;
 		simple-audio-card,frame-master = <&link0_codec>;
@@ -517,12 +530,12 @@
 
 		simple-audio-card,cpu {
 			sound-dai = <&mcasp0>;
-			system-clock-frequency = <24576000>;
+			system-clock-frequency = <24000000>;
 		};
 
 		link0_codec: simple-audio-card,codec {
 			sound-dai = <&tlv320aic3106>;
-			system-clock-frequency = <24576000>;
+			system-clock-frequency = <24000000>;
 		};
 	};
 };
@@ -538,12 +551,12 @@
 	/* 4 serializer */
 	serial-dir = <  /* 0: INACTIVE, 1: TX, 2: RX */
 		0 0 0 0
-		0 0 0 0
 		0 0 0 1
-		2 0 0 0
+		0 2 0 0
+		0 0 0 0
 	>;
-	tx-num-evt = <32>;
-	rx-num-evt = <32>;
+	tx-num-evt = <1>;
+	rx-num-evt = <1>;
 };
 
 &edma0 {

@@ -256,12 +256,6 @@ struct davinci_mmc_config trik_mmcsd1_platdata = {
 	.set_power = trik_wifi_set_power,
 };
 
-static void __init trik_init_wifi(void)
-{
-	davinci_cfg_reg(DA850_GPIO6_8);
-	gpio_direction_output(GPIO_TO_PIN(6,8), 1);
-}
-
 static void pdata_quirks_check(struct pdata_init *quirks)
 {
 	while (quirks->compatible) {
@@ -277,7 +271,6 @@ static struct pdata_init pdata_quirks[] __initdata = {
 	{ "ti,da850-lcdk", da850_vpif_capture_legacy_init_lcdk, },
 	{ "ti,da850-evm", da850_vpif_display_legacy_init_evm, },
 	{ "ti,da850-evm", da850_vpif_capture_legacy_init_evm, },
-	{ "ctl,trikboard", trik_init_wifi, },
 	{ /* sentinel */ },
 };
 
