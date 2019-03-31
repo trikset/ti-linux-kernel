@@ -301,29 +301,19 @@
 				reg = <0>;
 				partition@0 {
 					label = "uboot";
-					reg = <0x00000000 0x00040000>;
-					read-only;
+					reg = <0x00000000 0x00080000>;
 				};
 				partition@1 {
-					label = "uboot-env1";
-					reg = <0x00040000 0x00040000>;
-					read-only;
-				};
-				partition@2 {
-					label = "uboot-env2";
+					label = "uboot-env";
 					reg = <0x00080000 0x00040000>;
 				};
-				partition@3 {
-					label = "config-periph";
-					reg = <0x000c0000 0x00040000>;
-				};
-				partition@4 {
+				partition@2 {
 					label = "kernel";
-					reg = <0x00100000 0x00300000>;
+					reg = <0x000c0000 0x00440000>;
 				};
-				partition@5 {
+				partition@3 {
 					label = "RootFS";
-					reg = <0x00400000 0x00c00000>;
+					reg = <0x00500000 0x00b00000>;
 				};
 			};
 		};
