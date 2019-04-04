@@ -398,7 +398,7 @@ static void config_vpif_params(struct vpif_params *vpifparams,
 int vpif_set_video_params(struct vpif_params *vpifparams, u8 channel_id)
 {
 	const struct vpif_channel_config_params *config = &vpifparams->std_info;
-pr_err("starting %ix%i, eav %i, sav %i, l5 %i\n", config->width, config->height, 
+pr_err("starting %ix%i, eav2sav %i, sav2eav %i, l5 %i\n", config->width, config->height, 
              config->eav2sav, config->sav2eav, config->l5); 
 	int found = 1;
 

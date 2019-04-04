@@ -16,6 +16,8 @@
  *	  add static buffer allocation
  */
 
+//#define ISR_PRINTERS 
+
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/of_graph.h>
@@ -154,17 +156,18 @@ static void vpif_buffer_queue(struct vb2_buffer *vb)
 	struct vpif_cap_buffer *buf = to_vpif_buffer(vbuf);
 	struct common_obj *common;
 	unsigned long flags;
+//pr_err("adding vb2_buffer %p\n", vb); 
 
 	common = &ch->common[VPIF_VIDEO_INDEX];
 
 	vpif_dbg(2, debug, "vpif_buffer_queue\n");
 
-pr_err("ch->channel_id = %i, common %p, adding &buf->list %p\n", ch -> channel_id, 
-    common, &buf->list); 
 	spin_lock_irqsave(&common->irqlock, flags);
 	/* add the buffer to the DMA queue */
 	list_add_tail(&buf->list, &common->dma_queue);
 	spin_unlock_irqrestore(&common->irqlock, flags);
+//pr_err("ch->channel_id = %i, common %p, adding &buf->list %p next %p prev %p, dma_queue %p\n", ch -> channel_id, 
+ //    common, &buf->list, buf -> list.next, buf -> list.prev, &common->dma_queue); 
 }
 
 /**
@@ -228,6 +231,8 @@ pr_err("start_streaming: list_del %p\n", &common->cur_frm->list);
 			 addr + common->ctop_off,
 			 addr + common->cbtm_off);
 
+pr_err("ch->channel_id %i ,  ycmux_mode %i\n", ch->channel_id, ycmux_mode); 
+
 	/**
 	 * Set interrupt for both the fields in VPIF Register enable channel in
 	 * VPIF register
@@ -240,6 +245,7 @@ pr_err("start_streaming: list_del %p\n", &common->cur_frm->list);
 	}
 	if (VPIF_CHANNEL1_VIDEO == ch->channel_id ||
 		ycmux_mode == 2) {
+pr_err("enable channel 1\n"); 
 		channel1_intr_assert();
 		channel1_intr_enable(1);
 		enable_channel1(1);
@@ -336,7 +342,9 @@ static const struct vb2_ops video_qops = {
 static void vpif_process_buffer_complete(struct common_obj *common)
 {
 	common->cur_frm->vb.vb2_buf.timestamp = ktime_get_ns();
-pr_err("vb2_buffer_done\n"); 
+#ifdef ISR_PRINTERS
+pr_err("vb2_buffer_done %p\n", &(common->cur_frm->vb) ); 
+#endif
 	vb2_buffer_done(&common->cur_frm->vb.vb2_buf, VB2_BUF_STATE_DONE);
 	/* Make curFrm pointing to nextFrm */
 	common->cur_frm = common->next_frm;
@@ -353,15 +361,21 @@ pr_err("vb2_buffer_done\n");
 static void vpif_schedule_next_buffer(struct common_obj *common)
 {
 	unsigned long addr = 0;
-
+#ifdef ISR_PRINTERS 
+pr_err("common->next_frm = %p, -> list = %p, prev %p, next %p, sequence %08x, userbits %02x \n", common->next_frm, &(common->next_frm->list), 
+         common->next_frm->list.prev, common->next_frm->list.next, common->next_frm->vb.sequence,
+         common->next_frm->vb.timecode.userbits
+); 
+#endif
 	spin_lock(&common->irqlock);
 	common->next_frm = list_entry(common->dma_queue.next,
 				     struct vpif_cap_buffer, list);
-pr_err("common->next_frm = %p, -> list = %p\n", common->next_frm, common->next_frm->list); 
 	/* Remove that buffer from the buffer queue */
 	list_del(&common->next_frm->list);
 	spin_unlock(&common->irqlock);
+#ifdef ISR_PRINTERS 
 pr_err("vpif_schedule_next_buffer list_del %p\n", &common->next_frm->list);
+#endif 
 	addr = vb2_dma_contig_plane_dma_addr(&common->next_frm->vb.vb2_buf, 0);
 
 	/* Set top and bottom field addresses in VPIF registers */
@@ -389,13 +403,17 @@ static irqreturn_t vpif_channel_isr(int irq, void *dev_id)
 
 	channel_id = 1; // *(int *)(dev_id);
 
+if ((regr(VPIF_STATUS)  & (1 << 4)) != 0) pr_err("ERROR ISR\n"); 
+
 	if (!vpif_intr_status(1)) { 
 pr_err("cleaning status %02x\n", regr(VPIF_STATUS)); 
 regw(regr(VPIF_STATUS), VPIF_STATUS_CLR);
 		return IRQ_NONE;
         }
 
+#ifdef ISR_PRINTERS
 pr_err("isr id %i, status %02x\n", channel_id, regr(VPIF_STATUS)); 
+#endif
 	ch = dev->dev[channel_id];
 
 	for (i = 0; i < VPIF_NUMBER_OF_OBJECTS; i++) {
@@ -404,7 +422,9 @@ pr_err("isr id %i, status %02x\n", channel_id, regr(VPIF_STATUS));
 		/* Check the field format */
 		if (1 == ch->vpifparams.std_info.frm_fmt ||
 		    common->fmt.fmt.pix.field == V4L2_FIELD_NONE) {
+#ifdef ISR_PRINTERS
 pr_err("obj %i common %p\n", i, common); 
+#endif
 			/* Progressive mode */
 			spin_lock(&common->irqlock);
 			if (list_empty(&common->dma_queue)) {
@@ -414,12 +434,13 @@ pr_err("list_empty\n");
 			}
 			spin_unlock(&common->irqlock);
 
-//			if (!channel_first_int[i][channel_id])
+			if (!channel_first_int[i][channel_id]) { 
+   				vpif_schedule_next_buffer(common);
 				vpif_process_buffer_complete(common);
+			}
 
 			channel_first_int[i][channel_id] = 0;
 
-			vpif_schedule_next_buffer(common);
 
 
 			channel_first_int[i][channel_id] = 0;
