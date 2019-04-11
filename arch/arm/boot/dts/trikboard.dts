@@ -133,8 +133,6 @@
                                 0x20 0x08880808 0x0fff0f0f
                                 /* GP2[5, 4, 3, 2] */ 
                                 0x18 0x00888800 0x00ffff00 
-                                /* GP6[13] */  
-                                0x34 0x00000800 0x00000f00 
                                 /* 1[12, 11, 10] */
                                 0x08 0x00444000 0x00fff000
                                 /* GP0[2, 3, 4] */
@@ -154,14 +152,20 @@
                                >;
                        };
                        /* here gpio2 means a signal name in the schematics 
-                          it is a reset signal for the JVP1 connector */ 
+                          it is a reset signal for the JVP2 connector */ 
 		       pinctrl_gpio2: pinmux_pinctrl_gpio2 {
                                pinctrl-single,bits = < 
                                /* GP2[1] */ 
                                0x18 0x08000000 0x0f000000 
 			       >; 
                        }; 
-                       pinctrl_clkout: pinmux_pinctrl_clkout { 
+ 		       pinctrl_gpio1: pinmux_pinctrl_gpio1 {
+                               pinctrl-single,bits = < 
+                               /* GP6[13] */ 
+                               0x34 0x00000800 0x00000f00
+			       >; 
+                       }; 
+                      pinctrl_clkout: pinmux_pinctrl_clkout { 
                                pinctrl-single,bits = <  
                                    /* clkout */ 
                                    0x34 0x00000010 0x000000f0
@@ -208,9 +212,23 @@
 		};
 		i2c0: i2c@22000 {
 			status = "okay";
-			clock-frequency = <100000>;
+			clock-frequency = <10000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c0_pins>;
+			ov7670d0: camera@21 {
+	                        pinctrl-names = "default";
+        	                pinctrl-0 = <&pinctrl_gpio1 &pinctrl_clkout>; 
+				compatible = "ovti,ov7670";
+				reg = <0x21>;
+		  		reset-gpios = <&gpio GPIO_TO_PIN(6,13) GPIO_ACTIVE_LOW>; 
+				port {
+					ov7670e0: endpoint {
+						remote-endpoint = <&vpif_input_ch0>;
+					};
+				};
+			};
+
+
 		};
 		i2c1: i2c@228000 {
 			status = "okay";
@@ -218,17 +236,15 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins>;
 
-			ov7670: camera@21 {
-/*status = "disabled"; */ 
+			ov7670d1: camera@21 {
 	                        pinctrl-names = "default";
-        	                pinctrl-0 = <&pinctrl_gpio2 &pinctrl_clkout>; 
+        	                pinctrl-0 = <&pinctrl_gpio2 >; 
 				compatible = "ovti,ov7670";
 				reg = <0x21>;
 		  		reset-gpios = <&gpio GPIO_TO_PIN(2,1) GPIO_ACTIVE_LOW>; 
 				port {
-					ov7670_1: endpoint {
+					ov7670e1: endpoint {
 						remote-endpoint = <&vpif_input_ch1>;
-			/*			bus-width = <8>; */
 					};
 				};
 			};
@@ -532,21 +548,30 @@
 
         ports { 
 
+			#address-cells = <1>;
+			#size-cells = <0>;
 		port@0 {
 
 			#address-cells = <1>;
 			#size-cells = <0>;
-/*			vpif_input_ch0: endpoint@0 {
+                        reg = <0>;
+			vpif_input_ch0: endpoint@0 {
 				reg = <0>;
 				bus-width = <8>;
-/*				remote-endpoint = <&ov7670_0>; 
-			}; */
+				remote-endpoint = <&ov7670e0>; 
+			}; 
+                };
 
-			vpif_input_ch1: endpoint@1 {
-				reg = <1>;
+                port@1 {
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>; 
+			vpif_input_ch1: endpoint@0 {
+				reg = <0>;
 				bus-width = <8>;
 				data-shift = <8>;
-				remote-endpoint = <&ov7670_1>;   
+				remote-endpoint = <&ov7670e1>;   
 			};
 		};
         }; 
