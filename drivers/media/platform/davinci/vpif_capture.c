@@ -42,11 +42,13 @@ MODULE_VERSION(VPIF_CAPTURE_VERSION);
 #define vpif_dbg(level, debug, fmt, arg...)	\
 		v4l2_dbg(level, debug, &vpif_obj.v4l2_dev, fmt, ## arg)
 
-static int debug = 1;
+static int debug = 3;
 
+#if 0 
 module_param(debug, int, 0644);
 
 MODULE_PARM_DESC(debug, "Debug level 0-1");
+#endif 
 
 #define VPIF_DRIVER_NAME	"vpif_capture"
 MODULE_ALIAS("platform:" VPIF_DRIVER_NAME);
@@ -757,6 +759,8 @@ static int vpif_set_input(
 	int ret;
 
 	sd_index = vpif_input_to_subdev(vpif_cfg, chan_cfg, index);
+pr_err("vpif: sd_index = %i, index = %i, chan_cfg = %p, chan_cfg->input_count = %i\n", 
+sd_index, index, chan_cfg, (chan_cfg)?chan_cfg->input_count:0); 
 	if (sd_index >= 0) {
 		sd = vpif_obj.sd[sd_index];
 		subdev_info = &vpif_cfg->subdev_info[sd_index];
@@ -788,6 +792,7 @@ static int vpif_set_input(
 		}
 	}
 	ch->input_idx = index;
+pr_err("vpif: set sd %p for channel %i\n", sd, ch->channel_id); 
 	ch->sd = sd;
 	/* copy interface parameters to vpif */
 	ch->vpifparams.iface = chan_cfg->vpif_if;
@@ -1248,13 +1253,19 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	struct v4l2_input input;
 	int ret;
 
-	if (!config->chan_config[ch->channel_id].inputs)
+pr_err("ch->channel_id = %i, ch->input_idx = %i\n", ch->channel_id, ch->input_idx); 
+
+	if (!config->chan_config[ch->channel_id].inputs) {
+pr_err("ENODATA 1\n");
 		return -ENODATA;
+}
 
 	chan_cfg = &config->chan_config[ch->channel_id];
 	input = chan_cfg->inputs[ch->input_idx].input;
-	if (input.capabilities != V4L2_IN_CAP_DV_TIMINGS)
+	if (input.capabilities != V4L2_IN_CAP_DV_TIMINGS) {
+pr_err("ENODATA 2, input.capabilities = %08x\n", input.capabilities);
 		return -ENODATA;
+}
 
 	if (timings->type != V4L2_DV_BT_656_1120) {
 		vpif_dbg(2, debug, "Timing type not defined\n");
@@ -1263,7 +1274,7 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 
 	if (vb2_is_busy(&common->buffer_queue))
 		return -EBUSY;
-
+#if 0 
 	/* Configure subdevice timings, if any */
 	ret = v4l2_subdev_call(ch->sd, video, s_dv_timings, timings);
 	if (ret == -ENOIOCTLCMD || ret == -ENODEV)
@@ -1272,7 +1283,7 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 		vpif_dbg(2, debug, "Error setting custom DV timings\n");
 		return ret;
 	}
-
+#endif
 	if (!(timings->bt.width && timings->bt.height &&
 				(timings->bt.hbackporch ||
 				 timings->bt.hfrontporch ||
@@ -1289,7 +1300,7 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	/* Configure video port timings */
 
 	std_info->eav2sav = V4L2_DV_BT_BLANKING_WIDTH(bt) - 8;
-	std_info->sav2eav = bt->width;
+	std_info->sav2eav = bt->width * 2; // TODO: bytes per pixel not 2!
 
 	std_info->l1 = 1;
 	std_info->l3 = bt->vsync + bt->vbackporch + 1;
@@ -1311,14 +1322,19 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	} else {
 		std_info->l5 = std_info->vsize - (bt->vfrontporch - 1);
 	}
+
+pr_err("vfp %i, vsync %i, vbp %i, l1 %i, l3 %i, l5 %i\n",
+  timings->bt.vfrontporch, timings->bt.vsync, timings->bt.vbackporch, 
+  std_info->l1, std_info->l3, std_info->l5); 
+
 	strncpy(std_info->name, "Custom timings BT656/1120", VPIF_MAX_NAME);
 	std_info->width = bt->width;
 	std_info->height = bt->height;
 	std_info->frm_fmt = bt->interlaced ? 0 : 1;
-	std_info->ycmux_mode = 0;
+	std_info->ycmux_mode = 1;
 	std_info->capture_format = 0;
 	std_info->vbi_supported = 0;
-	std_info->hd_sd = 1;
+	std_info->hd_sd = 0;
 	std_info->stdid = 0;
 
 	vid_ch->stdid = 0;
@@ -1453,12 +1469,12 @@ static int vpif_async_bound(struct v4l2_async_notifier *notifier,
 
 		if (fwnode == subdev->fwnode) {
 			vpif_obj.sd[i] = subdev;
-			vpif_obj.config->chan_config->inputs[i].subdev_name =
+			vpif_obj.config->chan_config[i].inputs[0].subdev_name =
 				(char *)to_of_node(subdev->fwnode)->full_name;
 			vpif_dbg(2, debug,
 				 "%s: setting input %d subdev_name = %s\n",
 				 __func__, i,
-				vpif_obj.config->chan_config->inputs[i].subdev_name);
+				vpif_obj.config->chan_config[i].inputs[0].subdev_name);
 			return 0;
 		}
 	}
@@ -1603,16 +1619,15 @@ pr_err("get_pdata for channel %i\n", i);
 		sdinfo = &pdata->subdev_info[i];
 		chan = &pdata->chan_config[i];
 		chan->inputs = devm_kzalloc(&pdev->dev,
-					    sizeof(*chan->inputs) *
-					    VPIF_CAPTURE_NUM_CHANNELS,
+					    sizeof(*chan->inputs), 
 					    GFP_KERNEL);
 		if (!chan->inputs)
 			return NULL;
 
 		chan->input_count++;
-		chan->inputs[i].input.type = V4L2_INPUT_TYPE_CAMERA;
-		chan->inputs[i].input.std = V4L2_STD_ALL;
-		chan->inputs[i].input.capabilities = V4L2_IN_CAP_STD;
+		chan->inputs[0].input.type = V4L2_INPUT_TYPE_CAMERA;
+		chan->inputs[0].input.std = V4L2_STD_ALL;
+		chan->inputs[0].input.capabilities = V4L2_IN_CAP_DV_TIMINGS; // V4L2_IN_CAP_STD;
 
 		err = v4l2_fwnode_endpoint_parse(of_fwnode_handle(endpoint),
 						 &bus_cfg);
