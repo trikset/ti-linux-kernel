@@ -285,38 +285,12 @@ static struct regval_list regs_from_the_script[] = {
   { 0xb0, 0x84 }, 
 
 // drive 1x
- //  { 0x09, 0x00 }, 
+   { 0x09, 0x00 }, 
 
 // gain ceiling, awb, agc, aec  
-//  { 0x14, 0x1a }, 
-//  { 0x13, 0x87 },
-{ 0xff, 0xff },
-#if 0   
-  { 0x6f, 0x6f }, 
-  { 0xa5, 0x05 }, 
-  { 0x24, 0x95 }, 
-  { 0x25, 0x33 }, 
-  { 0x26, 0xe3 }, 
-  { 0x9f, 0x78 }, 
-  { 0xa0, 0x68 }, 
-  { 0xa6, 0xd8 }, 
-  { 0xa7, 0xd8 }, 
-  { 0xa9, 0x90 }, 
-  { 0xaa, 0x94 }, 
-  { 0x9d, 0x98 }, 
-  { 0x9e, 0x7f }, 
-  { 0xa5, 0x02 }, 
-  { 0xab, 0x03 }, 
-  { 0x3b, 0x12 }, 
-  { 0x41, 0x0a }, 
-  { 0x4f, 0x80 }, 
-  { 0x50, 0x70 }, 
-  { 0x51, 0x1a }, 
-  { 0x52, 0x28 }, 
-  { 0x53, 0x15 }, 
-  { 0x54, 0x40 }, 
-  { 0xff, 0xff }, 
-#endif 
+  { 0x14, 0x1a }, 
+  { 0x13, 0x87 },
+  { 0xff, 0xff },
 };
 
 static struct regval_list ov7670_my_qvga_regs2[] = {
@@ -342,6 +316,9 @@ static struct regval_list ov7670_default_regs[] = {
 	{ REG_COM7, COM7_RESET },
 	{ REG_COM1, (1 << 6) },	/* CCIR601 enable */
 	{ REG_COM15, COM15_R01FE }, // Output range: 01 to FE
+/// drive 1x
+   { 0x09, 0x00 }, 
+
 /*
  * Clock scale: 3 = 15fps
  *              2 = 20fps
@@ -357,7 +334,6 @@ static struct regval_list ov7670_default_regs[] = {
 	{ REG_HSTART, 0x13 },	{ REG_HSTOP, 0x01 },
 	{ REG_HREF, 0xb6 },	{ REG_VSTART, 0x02 },
 	{ REG_VSTOP, 0x7a },	{ REG_VREF, 0x0a },
-
 	{ REG_COM3, 0 },	{ REG_COM14, 0 },
 	/* Mystery scaling numbers */
 	{ 0x70, 0x3a },		{ 0x71, 0x35 },
@@ -663,6 +639,7 @@ static int ov7670_reset(struct v4l2_subdev *sd, u32 val)
 static int ov7670_init(struct v4l2_subdev *sd, u32 val)
 {
 	return ov7670_write_array(sd, regs_from_the_script);
+//	return ov7670_write_array(sd, ov7670_default_regs);
 }
 
 static int ov7670_detect(struct v4l2_subdev *sd)
@@ -1088,10 +1065,9 @@ static int ov7670_set_fmt(struct v4l2_subdev *sd,
 	struct ov7670_format_struct *ovfmt;
 	struct ov7670_win_size *wsize;
 	struct ov7670_info *info = to_state(sd);
+        struct i2c_client *client = v4l2_get_subdevdata(sd);
 	unsigned char com7;
 	int ret;
-
-pr_err("!!!ov7670_set_fmt called %ix%i!\n", format->format.width, format->format.height); 
 
 	if (format->pad)
 		return -EINVAL;
@@ -1109,9 +1085,9 @@ pr_err("!!!ov7670_set_fmt called %ix%i!\n", format->format.width, format->format
 	if (ret)
 		return ret;
 
-pr_err("!!!setting sensor res to %ix%i = (%i-%i)x(%i-%i)!\n", 
-        wsize -> width, wsize -> height, 
-        wsize->hstart, wsize->hstop, wsize->vstart, wsize -> vstop); 
+        v4l_dbg(3, debug, client, "!!!setting sensor res to %ix%i = (%i-%i)x(%i-%i)!\n", 
+            wsize -> width, wsize -> height, 
+            wsize->hstart, wsize->hstop, wsize->vstart, wsize -> vstop); 
 
 	/*
 	 * COM7 is a pain in the ass, it doesn't like to be read then
@@ -1735,7 +1711,7 @@ static int ov7670_probe(struct i2c_client *client,
 	sd = &info->sd;
 	v4l2_i2c_subdev_init(sd, client, &ov7670_ops);
 
-pr_err("ov7670 sd = %p\n", sd); 
+        v4l_dbg(3, debug, client, "ov7670 sd = %p\n", sd); 
 
 	info->clock_speed = 30; /* default: a guess */
 	if (client->dev.platform_data) {
@@ -1765,24 +1741,24 @@ pr_err("ov7670 sd = %p\n", sd);
 
 	info->clk = devm_clk_get(&client->dev, "xclk");
 	if (IS_ERR(info->clk)) {
-                pr_err("info->clk\n"); 
+                v4l_dbg(1, debug, client, "info->clk\n"); 
 		return PTR_ERR(info->clk);
         }
 	ret = clk_prepare_enable(info->clk);
 	if (ret) {
-                pr_err("clk_prepare_enable\n"); 
+                v4l_dbg(1, debug, client, "clk_prepare_enable\n"); 
 		return ret;
         }
 
 	ret = ov7670_init_gpio(client, info);
 	if (ret) {
-                pr_err("ov7670_init_gpio\n"); 
+                v4l_dbg(1, debug, client, "ov7670_init_gpio\n"); 
 		goto clk_disable;
         }
 
 	info->clock_speed = clk_get_rate(info->clk) / 1000000;
 	if (info->clock_speed < 10 || info->clock_speed > 48) {
-                pr_err("bad speed : %i\n", info->clock_speed);
+                v4l_dbg(1, debug, client, "bad speed : %i\n", info->clock_speed);
 		ret = -EINVAL;
 		goto clk_disable;
 	}
@@ -1851,7 +1827,7 @@ pr_err("ov7670 sd = %p\n", sd);
 	v4l2_ctrl_handler_setup(&info->hdl);
 
 	ret = v4l2_async_register_subdev(&info->sd);
-pr_err("ov7670: subdev name %s, ops %p\n", sd -> name, sd -> ops); 
+        v4l_dbg(3, debug, client, "ov7670: subdev name %s, ops %p\n", sd -> name, sd -> ops); 
 	if (ret < 0)
 		goto hdl_free;
 
