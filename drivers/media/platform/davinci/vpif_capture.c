@@ -42,13 +42,11 @@ MODULE_VERSION(VPIF_CAPTURE_VERSION);
 #define vpif_dbg(level, debug, fmt, arg...)	\
 		v4l2_dbg(level, debug, &vpif_obj.v4l2_dev, fmt, ## arg)
 
-static int debug = 3;
+static int debug = 1;
 
-#if 0 
 module_param(debug, int, 0644);
 
 MODULE_PARM_DESC(debug, "Debug level 0-1");
-#endif 
 
 #define VPIF_DRIVER_NAME	"vpif_capture"
 MODULE_ALIAS("platform:" VPIF_DRIVER_NAME);
@@ -158,7 +156,6 @@ static void vpif_buffer_queue(struct vb2_buffer *vb)
 	struct vpif_cap_buffer *buf = to_vpif_buffer(vbuf);
 	struct common_obj *common;
 	unsigned long flags;
-//pr_err("adding vb2_buffer %p\n", vb); 
 
 	common = &ch->common[VPIF_VIDEO_INDEX];
 
@@ -168,8 +165,6 @@ static void vpif_buffer_queue(struct vb2_buffer *vb)
 	/* add the buffer to the DMA queue */
 	list_add_tail(&buf->list, &common->dma_queue);
 	spin_unlock_irqrestore(&common->irqlock, flags);
-//pr_err("ch->channel_id = %i, common %p, adding &buf->list %p next %p prev %p, dma_queue %p\n", ch -> channel_id, 
- //    common, &buf->list, buf -> list.next, buf -> list.prev, &common->dma_queue); 
 }
 
 /**
@@ -224,7 +219,7 @@ static int vpif_start_streaming(struct vb2_queue *vq, unsigned int count)
 	/* Remove buffer from the buffer queue */
 	list_del(&common->cur_frm->list);
 	spin_unlock_irqrestore(&common->irqlock, flags);
-pr_err("start_streaming: list_del %p\n", &common->cur_frm->list); 
+        vpif_dbg(3, debug, "start_streaming: list_del %p\n", &common->cur_frm->list); 
 
 	addr = vb2_dma_contig_plane_dma_addr(&common->cur_frm->vb.vb2_buf, 0);
 
@@ -233,7 +228,7 @@ pr_err("start_streaming: list_del %p\n", &common->cur_frm->list);
 			 addr + common->ctop_off,
 			 addr + common->cbtm_off);
 
-pr_err("ch->channel_id %i ,  ycmux_mode %i\n", ch->channel_id, ycmux_mode); 
+        vpif_dbg(3, debug, "ch->channel_id %i ,  ycmux_mode %i\n", ch->channel_id, ycmux_mode); 
 
 	/**
 	 * Set interrupt for both the fields in VPIF Register enable channel in
@@ -247,7 +242,6 @@ pr_err("ch->channel_id %i ,  ycmux_mode %i\n", ch->channel_id, ycmux_mode);
 	}
 	if (VPIF_CHANNEL1_VIDEO == ch->channel_id ||
 		ycmux_mode == 2) {
-pr_err("enable channel 1\n"); 
 		channel1_intr_assert();
 		channel1_intr_enable(1);
 		enable_channel1(1);
@@ -344,9 +338,6 @@ static const struct vb2_ops video_qops = {
 static void vpif_process_buffer_complete(struct common_obj *common)
 {
 	common->cur_frm->vb.vb2_buf.timestamp = ktime_get_ns();
-#ifdef ISR_PRINTERS
-pr_err("vb2_buffer_done %p\n", &(common->cur_frm->vb) ); 
-#endif
 	vb2_buffer_done(&common->cur_frm->vb.vb2_buf, VB2_BUF_STATE_DONE);
 	/* Make curFrm pointing to nextFrm */
 	common->cur_frm = common->next_frm;
@@ -363,21 +354,12 @@ pr_err("vb2_buffer_done %p\n", &(common->cur_frm->vb) );
 static void vpif_schedule_next_buffer(struct common_obj *common)
 {
 	unsigned long addr = 0;
-#ifdef ISR_PRINTERS 
-pr_err("common->next_frm = %p, -> list = %p, prev %p, next %p, sequence %08x, userbits %02x \n", common->next_frm, &(common->next_frm->list), 
-         common->next_frm->list.prev, common->next_frm->list.next, common->next_frm->vb.sequence,
-         common->next_frm->vb.timecode.userbits
-); 
-#endif
 	spin_lock(&common->irqlock);
 	common->next_frm = list_entry(common->dma_queue.next,
 				     struct vpif_cap_buffer, list);
 	/* Remove that buffer from the buffer queue */
 	list_del(&common->next_frm->list);
 	spin_unlock(&common->irqlock);
-#ifdef ISR_PRINTERS 
-pr_err("vpif_schedule_next_buffer list_del %p\n", &common->next_frm->list);
-#endif 
 	addr = vb2_dma_contig_plane_dma_addr(&common->next_frm->vb.vb2_buf, 0);
 
 	/* Set top and bottom field addresses in VPIF registers */
@@ -403,19 +385,15 @@ static irqreturn_t vpif_channel_isr(int irq, void *dev_id)
 	int channel_id;
 	int fid = -1, i;
 
-	channel_id = 1; // *(int *)(dev_id);
+	channel_id = 1; // *(int *)(dev_id);  TODO: must depend on actual channel 
 
-if ((regr(VPIF_STATUS)  & (1 << 4)) != 0) pr_err("ERROR ISR\n"); 
+        if ((regr(VPIF_STATUS)  & (1 << 4)) != 0) vpif_dbg(2, debug, "ERROR ISR\n"); 
 
 	if (!vpif_intr_status(1)) { 
-pr_err("cleaning status %02x\n", regr(VPIF_STATUS)); 
-regw(regr(VPIF_STATUS), VPIF_STATUS_CLR);
+                regw(regr(VPIF_STATUS), VPIF_STATUS_CLR);
 		return IRQ_NONE;
         }
 
-#ifdef ISR_PRINTERS
-pr_err("isr id %i, status %02x\n", channel_id, regr(VPIF_STATUS)); 
-#endif
 	ch = dev->dev[channel_id];
 
 	for (i = 0; i < VPIF_NUMBER_OF_OBJECTS; i++) {
@@ -424,14 +402,10 @@ pr_err("isr id %i, status %02x\n", channel_id, regr(VPIF_STATUS));
 		/* Check the field format */
 		if (1 == ch->vpifparams.std_info.frm_fmt ||
 		    common->fmt.fmt.pix.field == V4L2_FIELD_NONE) {
-#ifdef ISR_PRINTERS
-pr_err("obj %i common %p\n", i, common); 
-#endif
 			/* Progressive mode */
 			spin_lock(&common->irqlock);
 			if (list_empty(&common->dma_queue)) {
 				spin_unlock(&common->irqlock);
-pr_err("list_empty\n"); 
 				continue;
 			}
 			spin_unlock(&common->irqlock);
@@ -759,8 +733,6 @@ static int vpif_set_input(
 	int ret;
 
 	sd_index = vpif_input_to_subdev(vpif_cfg, chan_cfg, index);
-pr_err("vpif: sd_index = %i, index = %i, chan_cfg = %p, chan_cfg->input_count = %i\n", 
-sd_index, index, chan_cfg, (chan_cfg)?chan_cfg->input_count:0); 
 	if (sd_index >= 0) {
 		sd = vpif_obj.sd[sd_index];
 		subdev_info = &vpif_cfg->subdev_info[sd_index];
@@ -792,7 +764,6 @@ sd_index, index, chan_cfg, (chan_cfg)?chan_cfg->input_count:0);
 		}
 	}
 	ch->input_idx = index;
-pr_err("vpif: set sd %p for channel %i\n", sd, ch->channel_id); 
 	ch->sd = sd;
 	/* copy interface parameters to vpif */
 	ch->vpifparams.iface = chan_cfg->vpif_if;
@@ -1121,7 +1092,6 @@ static int vpif_s_fmt_vid_cap(struct file *file, void *priv,
 	struct common_obj *common = &ch->common[VPIF_VIDEO_INDEX];
 	int ret;
 
-pr_err("vpif subdev %p\n", ch -> sd); 
 	vpif_dbg(2, debug, "%s\n", __func__);
 
 	if (vb2_is_busy(&common->buffer_queue))
@@ -1265,19 +1235,16 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	struct v4l2_input input;
 	int ret;
 
-pr_err("ch->channel_id = %i, ch->input_idx = %i\n", ch->channel_id, ch->input_idx); 
 
 	if (!config->chan_config[ch->channel_id].inputs) {
-pr_err("ENODATA 1\n");
 		return -ENODATA;
-}
+        }
 
 	chan_cfg = &config->chan_config[ch->channel_id];
 	input = chan_cfg->inputs[ch->input_idx].input;
 	if (input.capabilities != V4L2_IN_CAP_DV_TIMINGS) {
-pr_err("ENODATA 2, input.capabilities = %08x\n", input.capabilities);
 		return -ENODATA;
-}
+        } 
 
 	if (timings->type != V4L2_DV_BT_656_1120) {
 		vpif_dbg(2, debug, "Timing type not defined\n");
@@ -1335,9 +1302,9 @@ pr_err("ENODATA 2, input.capabilities = %08x\n", input.capabilities);
 		std_info->l5 = std_info->vsize - (bt->vfrontporch - 1);
 	}
 
-pr_err("vfp %i, vsync %i, vbp %i, l1 %i, l3 %i, l5 %i\n",
-  timings->bt.vfrontporch, timings->bt.vsync, timings->bt.vbackporch, 
-  std_info->l1, std_info->l3, std_info->l5); 
+        vpif_dbg(3, debug, "vfp %i, vsync %i, vbp %i, l1 %i, l3 %i, l5 %i\n",
+                timings->bt.vfrontporch, timings->bt.vsync, timings->bt.vbackporch, 
+                std_info->l1, std_info->l3, std_info->l5); 
 
 	strncpy(std_info->name, "Custom timings BT656/1120", VPIF_MAX_NAME);
 	std_info->width = bt->width;
@@ -1618,7 +1585,6 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 
 	for (i = 0; i < VPIF_CAPTURE_NUM_CHANNELS; i++) {
 
-pr_err("get_pdata for channel %i\n", i); 
 		struct device_node *rem;
 		unsigned int flags;
 		int err;
@@ -1644,10 +1610,10 @@ pr_err("get_pdata for channel %i\n", i);
 		err = v4l2_fwnode_endpoint_parse(of_fwnode_handle(endpoint),
 						 &bus_cfg);
 		if (err) {
-			pr_err( "Could not parse the endpoint\n");
+			vpif_dbg(1, debug,  "Could not parse the endpoint\n");
 			goto done;
 		}
-		pr_err("Endpoint %pOF, bus_width = %d\n",
+		vpif_dbg(2, debug, "Endpoint %pOF, bus_width = %d\n",
 			endpoint, bus_cfg.bus.parallel.bus_width);
 		flags = bus_cfg.bus.parallel.flags;
 
@@ -1664,8 +1630,6 @@ pr_err("get_pdata for channel %i\n", i);
 			goto done;
 		}
 
-		pr_err("Remote device %s, %pOF found\n",
-			rem->name, rem);
 		sdinfo->name = rem->full_name;
 
 		pdata->asd[i] = devm_kzalloc(&pdev->dev,
@@ -1738,8 +1702,6 @@ static __init int vpif_probe(struct platform_device *pdev)
 					IRQF_SHARED, VPIF_DRIVER_NAME,
 					(void *)(&vpif_obj.dev[res_idx]->
 					channel_id));
-pr_err("res_idx %i, channel_id %i, res->start %i\n", res_idx, 
-	vpif_obj.dev[res_idx]->  channel_id, res -> start); 
 		if (err) {
 			err = -EINVAL;
 			goto vpif_unregister;
