@@ -1064,7 +1064,7 @@ static int vpif_g_fmt_vid_cap(struct file *file, void *priv,
 			mbus_fmt->code, pix_fmt->field, pix_fmt->sizeimage);
 
 		common->fmt = *fmt;
-		vpif_update_std_info(ch);
+		//vpif_update_std_info(ch);
 	}
 
 	return 0;
@@ -1380,10 +1380,11 @@ static const struct v4l2_ioctl_ops vpif_ioctl_ops = {
 	.vidioc_streamon		= vb2_ioctl_streamon,
 	.vidioc_streamoff		= vb2_ioctl_streamoff,
 
+/*
 	.vidioc_querystd		= vpif_querystd,
 	.vidioc_s_std			= vpif_s_std,
 	.vidioc_g_std			= vpif_g_std,
-
+*/
 	.vidioc_enum_dv_timings		= vpif_enum_dv_timings,
 	.vidioc_query_dv_timings	= vpif_query_dv_timings,
 	.vidioc_s_dv_timings		= vpif_s_dv_timings,
