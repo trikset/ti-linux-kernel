@@ -514,7 +514,6 @@ static int vpif_update_std_info(struct channel_obj *ch)
 			return 0;
 		}
 	}
-#if 0 
 	for (index = 0; index < vpif_ch_params_count; index++) {
 		config = &vpif_ch_params[index];
 		if (config->hd_sd == 0) {
@@ -532,10 +531,6 @@ static int vpif_update_std_info(struct channel_obj *ch)
 			}
 		}
 	}
-#else
-index = 0; 
-memcpy(std_info, vpif_ch_params, sizeof(vpif_ch_params[0]));
-#endif
 
 	/* standard not found */
 	if (index == vpif_ch_params_count)
