@@ -195,6 +195,8 @@ struct ov7670_win_size {
 	int	hstop;		/* that they do not always make complete */
 	int	vstart;		/* sense to humans, but evidently the sensor */
 	int	vstop;		/* will do the right thing... */
+        int     hblank, vblank; /* the actual video timings, which 
+                                   do make sense for humans and for a DMA */ 
 	struct regval_list *regs; /* Regs to tweak */
 };
 
@@ -230,6 +232,7 @@ struct ov7670_info {
 		struct v4l2_ctrl *hue;
 	};
 	struct ov7670_format_struct *fmt;  /* Current format */
+        struct ov7670_win_size* wsize; 
 	struct clk *clk;
 	struct gpio_desc *resetb_gpio;
 	struct gpio_desc *pwdn_gpio;
@@ -273,24 +276,20 @@ static struct regval_list regs_from_the_script[] = {
   { 0x12, 0x80 }, 
   { 0x12, 0x00 }, 
 #endif
-//  { 0x11, 0x01 },  
+// CCIR656
   { 0x04, 0x40 }, 
   { 0x40, 0x80 }, 
-  { 0x15, 0x00 }, 
-  { 0x12, 0 }, 
-  { 0xc, 4 }, 
-  { 0x3e, 0x19 }, 
-  { 0x70, 0x3A }, 
-  { 0x71, 0x35 }, 
-  { 0x72, 0x11 }, 
-  { 0x73, 0xf1 }, 
-  { 0xa2, 0x00 }, 
-  { 0x3a, 0x8 }, 
-  { 0x32, 0xb0 }, 
+
+//  { 0x15, 0x00 }, 
+
   { 0xb0, 0x84 }, 
-  { 0x09, 0x00 }, 
-  { 0x14, 0x1a }, 
-  { 0x13, 0x87 },
+
+// drive 1x
+ //  { 0x09, 0x00 }, 
+
+// gain ceiling, awb, agc, aec  
+//  { 0x14, 0x1a }, 
+//  { 0x13, 0x87 },
 { 0xff, 0xff },
 #if 0   
   { 0x6f, 0x6f }, 
@@ -318,6 +317,24 @@ static struct regval_list regs_from_the_script[] = {
   { 0x54, 0x40 }, 
   { 0xff, 0xff }, 
 #endif 
+};
+
+static struct regval_list ov7670_my_qvga_regs2[] = {
+// YUV 
+  { 0x12, 0 }, 
+  { 0xc, 4 }, 
+  { 0x3e, 0x19 }, 
+  { 0x70, 0x3A }, 
+  { 0x71, 0x35 }, 
+  { 0x72, 0x11 }, 
+  { 0x73, 0xf1 }, 
+
+// size
+  { 0xa2, 0x00 }, 
+  { 0x3a, 0x8 }, 
+  { 0x32, 0xb0 }, 
+
+  { 0xff, 0xff },
 };
 
 
@@ -803,7 +820,7 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
 		.regs		= NULL,
 	},
 #endif
-	/* QVGA */
+	/* QVGA  YUYV */
 	{
 		.width		= QVGA_WIDTH,
 		.height		= QVGA_HEIGHT,
@@ -812,7 +829,9 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
 		.hstop		=  24,
 		.vstart		=  12,
 		.vstop		= 492,
-		.regs		= ov7670_my_qvga_regs,
+                .hblank         = 928,
+                .vblank         = 255 - QVGA_HEIGHT, 
+		.regs		= ov7670_my_qvga_regs2,
 	},
 #if 0 
 	/* QCIF */
@@ -1112,14 +1131,15 @@ pr_err("!!!setting sensor res to %ix%i = (%i-%i)x(%i-%i)!\n",
 			wsize->vstop);
 #endif
 	ret = 0;
-#if 0 
+#if 1 
 	if (wsize->regs)
 		ret = ov7670_write_array(sd, wsize->regs);
 #endif
 
-ov7670_write_array(sd, regs_from_the_script ); 
+//ov7670_write_array(sd, ov7670_my_qvga_regs2 ); 
 
 	info->fmt = ovfmt;
+        info->wsize = wsize; 
 
 	/*
 	 * If we're running RGB565, we must rewrite clkrc after setting
@@ -1250,6 +1270,32 @@ static int ov7670_enum_frame_size(struct v4l2_subdev *sd,
 
 	return -EINVAL;
 }
+
+
+int ov7670_g_dv_timings(struct v4l2_subdev *sd, struct v4l2_dv_timings *timings) {
+   struct ov7670_info* info = to_state(sd); 
+   struct ov7670_win_size* w = info->wsize;
+   if (w->hblank < 2 || w->vblank < 2) return -EDOM; 
+   struct v4l2_dv_timings t = { 
+     .type = V4L2_DV_BT_656_1120,
+     .bt = { 
+       .width   = w->width,
+       .height  = w->height,
+       .interlaced = 0,
+       .polarities = 0,
+       .pixelclock = 0, //TODO: set something real
+       .hfrontporch = 1, 
+       .hbackporch = 1, 
+       .hsync      = w->hblank - 2, 
+       .vfrontporch = 1,
+       .vbackporch  = 1,
+       .vsync       = w->vblank - 2,
+     }, 
+   };
+   *timings = t;
+   return 0; 
+}
+
 
 /*
  * Code for dealing with controls.
@@ -1620,6 +1666,7 @@ static const struct v4l2_subdev_core_ops ov7670_core_ops = {
 static const struct v4l2_subdev_video_ops ov7670_video_ops = {
 	.s_parm = ov7670_s_parm,
 	.g_parm = ov7670_g_parm,
+        .g_dv_timings = ov7670_g_dv_timings, 
 };
 
 static const struct v4l2_subdev_pad_ops ov7670_pad_ops = {
