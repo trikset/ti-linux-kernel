@@ -384,87 +384,90 @@ static irqreturn_t vpif_channel_isr(int irq, void *dev_id)
 	struct channel_obj *ch;
 	int channel_id;
 	int fid = -1, i;
+        int status = regr(VPIF_STATUS); 
+        
+        if ((status  & (1 << 4)) != 0) vpif_dbg(2, debug, "ERROR ISR\n"); 
 
-	channel_id = 1; // *(int *)(dev_id);  TODO: must depend on actual channel 
-
-        if ((regr(VPIF_STATUS)  & (1 << 4)) != 0) vpif_dbg(2, debug, "ERROR ISR\n"); 
-
-	if (!vpif_intr_status(1)) { 
+	if (!vpif_intr_status(1) && !vpif_intr_status(0)) { 
                 regw(regr(VPIF_STATUS), VPIF_STATUS_CLR);
 		return IRQ_NONE;
         }
 
-	ch = dev->dev[channel_id];
+        regw(regr(VPIF_STATUS), 3); 
+        for (channel_id = 0; channel_id < 2; ++channel_id)
+        if ((status & (1 << channel_id)) != 0) { 
+		ch = dev->dev[channel_id];
 
-	for (i = 0; i < VPIF_NUMBER_OF_OBJECTS; i++) {
-		common = &ch->common[i];
-		/* skip If streaming is not started in this channel */
-		/* Check the field format */
-		if (1 == ch->vpifparams.std_info.frm_fmt ||
-		    common->fmt.fmt.pix.field == V4L2_FIELD_NONE) {
-			/* Progressive mode */
-			spin_lock(&common->irqlock);
-			if (list_empty(&common->dma_queue)) {
-				spin_unlock(&common->irqlock);
-				continue;
-			}
-			spin_unlock(&common->irqlock);
-
-			if (!channel_first_int[i][channel_id]) { 
-   				vpif_schedule_next_buffer(common);
-				vpif_process_buffer_complete(common);
-			}
-
-			channel_first_int[i][channel_id] = 0;
-
-
-
-			channel_first_int[i][channel_id] = 0;
-		} else {
-			/**
-			 * Interlaced mode. If it is first interrupt, ignore
-			 * it
-			 */
-			if (channel_first_int[i][channel_id]) {
-				channel_first_int[i][channel_id] = 0;
-				continue;
-			}
-			if (0 == i) {
-				ch->field_id ^= 1;
-				/* Get field id from VPIF registers */
-				fid = vpif_channel_getfid(ch->channel_id);
-				if (fid != ch->field_id) {
-					/**
-					 * If field id does not match stored
-					 * field id, make them in sync
-					 */
-					if (0 == fid)
-						ch->field_id = fid;
-					return IRQ_HANDLED;
-				}
-			}
-			/* device field id and local field id are in sync */
-			if (0 == fid) {
-				/* this is even field */
-				if (common->cur_frm == common->next_frm)
-					continue;
-
-				/* mark the current buffer as done */
-				vpif_process_buffer_complete(common);
-			} else if (1 == fid) {
-				/* odd field */
+		for (i = 0; i < VPIF_NUMBER_OF_OBJECTS; i++) {
+			common = &ch->common[i];
+			/* skip If streaming is not started in this channel */
+			/* Check the field format */
+			if (1 == ch->vpifparams.std_info.frm_fmt ||
+			    common->fmt.fmt.pix.field == V4L2_FIELD_NONE) {
+				/* Progressive mode */
 				spin_lock(&common->irqlock);
-				if (list_empty(&common->dma_queue) ||
-				    (common->cur_frm != common->next_frm)) {
+				if (list_empty(&common->dma_queue)) {
 					spin_unlock(&common->irqlock);
 					continue;
 				}
 				spin_unlock(&common->irqlock);
 
-				vpif_schedule_next_buffer(common);
+				if (!channel_first_int[i][channel_id]) { 
+					vpif_schedule_next_buffer(common);
+					vpif_process_buffer_complete(common);
+				}
+
+				channel_first_int[i][channel_id] = 0;
+
+
+
+				channel_first_int[i][channel_id] = 0;
+			} else {
+				/**
+				 * Interlaced mode. If it is first interrupt, ignore
+				 * it
+				 */
+				if (channel_first_int[i][channel_id]) {
+					channel_first_int[i][channel_id] = 0;
+					continue;
+				}
+				if (0 == i) {
+					ch->field_id ^= 1;
+					/* Get field id from VPIF registers */
+					fid = vpif_channel_getfid(ch->channel_id);
+					if (fid != ch->field_id) {
+						/**
+						 * If field id does not match stored
+						 * field id, make them in sync
+						 */
+						if (0 == fid)
+							ch->field_id = fid;
+						return IRQ_HANDLED;
+					}
+				}
+				/* device field id and local field id are in sync */
+				if (0 == fid) {
+					/* this is even field */
+					if (common->cur_frm == common->next_frm)
+						continue;
+
+					/* mark the current buffer as done */
+					vpif_process_buffer_complete(common);
+				} else if (1 == fid) {
+					/* odd field */
+					spin_lock(&common->irqlock);
+					if (list_empty(&common->dma_queue) ||
+					    (common->cur_frm != common->next_frm)) {
+						spin_unlock(&common->irqlock);
+						continue;
+					}
+					spin_unlock(&common->irqlock);
+
+					vpif_schedule_next_buffer(common);
+				}
 			}
 		}
-	}
+        }
 	return IRQ_HANDLED;
 }
 
