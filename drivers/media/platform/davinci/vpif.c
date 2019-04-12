@@ -52,30 +52,6 @@ EXPORT_SYMBOL_GPL(vpif_base);
  * The table must include all presets from supported subdevices.
  */
 const struct vpif_channel_config_params vpif_ch_params[] = {
-  { 
-    .name = "320x240",
-    .width = 320,
-    .height = 240, 
-    .frm_fmt = 1, 
-    .ycmux_mode = 1, 
-    .eav2sav = 928 - 8 - 2, 
-    .sav2eav = 640, 
-                .l1 = 1,
-                .l3 = 9,
-                .l5 = 249,
-    .vsize = 255, 
-                    .capture_format = 0,
-                .vbi_supported = 0,
-                .hd_sd = 0,
-    .dv_timings = { 
-        .type = V4L2_DV_BT_656_1120, 
-        V4L2_INIT_BT_TIMINGS(320, 240, 0, 0, \
-               24000000, 0, 928, 0, 0, 255 , 0, \
-               0, 0, 0, \
-               0, 0, { 0, 0 }, 1 )
-    }
-  },
-#if 0 
 	/* HDTV formats */
 	{
 		.name = "480p59_94",
@@ -244,7 +220,6 @@ const struct vpif_channel_config_params vpif_ch_params[] = {
 		.hd_sd = 0,
 		.stdid = V4L2_STD_625_50,
 	},
-#endif
 };
 EXPORT_SYMBOL_GPL(vpif_ch_params);
 
@@ -398,8 +373,6 @@ static void config_vpif_params(struct vpif_params *vpifparams,
 int vpif_set_video_params(struct vpif_params *vpifparams, u8 channel_id)
 {
 	const struct vpif_channel_config_params *config = &vpifparams->std_info;
-pr_err("starting %ix%i, eav2sav %i, sav2eav %i, l5 %i\n", config->width, config->height, 
-             config->eav2sav, config->sav2eav, config->l5); 
 	int found = 1;
 
 	vpif_set_mode_info(config, channel_id, channel_id);

@@ -990,7 +990,7 @@ static int vpif_try_fmt_vid_cap(struct file *file, void *priv,
 	struct common_obj *common = &(ch->common[VPIF_VIDEO_INDEX]);
 
 	common->fmt = *fmt;
-	vpif_update_std_info(ch);
+// 	vpif_update_std_info(ch);
 
 	pixfmt->field = common->fmt.fmt.pix.field;
 	pixfmt->colorspace = common->fmt.fmt.pix.colorspace;
@@ -1096,16 +1096,16 @@ static int vpif_s_fmt_vid_cap(struct file *file, void *priv,
 	if (ret)
 		return ret;
 
- struct v4l2_subdev_format subdev_format = {
-    .pad = 0,
-    .which = V4L2_SUBDEV_FORMAT_ACTIVE,
-    .format = {
-       .width = fmt -> fmt.pix.width,
-       .height = fmt -> fmt.pix.height,
-       .code   = MEDIA_BUS_FMT_YUYV8_2X8,
-       .field = V4L2_FIELD_NONE,
-    }
-  };
+        struct v4l2_subdev_format subdev_format = {
+            .pad = 0,
+            .which = V4L2_SUBDEV_FORMAT_ACTIVE,
+            .format = {
+                 .width = fmt -> fmt.pix.width,
+                 .height = fmt -> fmt.pix.height,
+                 .code   = MEDIA_BUS_FMT_YUYV8_2X8,
+                 .field = V4L2_FIELD_NONE,
+            }
+        };
         ret = v4l2_subdev_call(ch->sd, pad, set_fmt, NULL, &subdev_format); 
         if (ret) return ret;
         struct v4l2_dv_timings timings;
