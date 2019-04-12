@@ -272,15 +272,11 @@ struct regval_list {
 };
 
 static struct regval_list regs_from_the_script[] = {
-#if 1 
   { 0x12, 0x80 }, 
   { 0x12, 0x00 }, 
-#endif
 // CCIR656
   { 0x04, 0x40 }, 
   { 0x40, 0x80 }, 
-
-//  { 0x15, 0x00 }, 
 
   { 0xb0, 0x84 }, 
 
@@ -316,8 +312,7 @@ static struct regval_list ov7670_default_regs[] = {
 	{ REG_COM7, COM7_RESET },
 	{ REG_COM1, (1 << 6) },	/* CCIR601 enable */
 	{ REG_COM15, COM15_R01FE }, // Output range: 01 to FE
-/// drive 1x
-   { 0x09, 0x00 }, 
+        { 0x09, 0x00 }, // drive 1x 
 
 /*
  * Clock scale: 3 = 15fps
@@ -639,7 +634,6 @@ static int ov7670_reset(struct v4l2_subdev *sd, u32 val)
 static int ov7670_init(struct v4l2_subdev *sd, u32 val)
 {
 	return ov7670_write_array(sd, regs_from_the_script);
-//	return ov7670_write_array(sd, ov7670_default_regs);
 }
 
 static int ov7670_detect(struct v4l2_subdev *sd)
