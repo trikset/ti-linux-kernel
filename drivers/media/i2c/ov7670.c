@@ -1136,7 +1136,6 @@ pr_err("!!!setting sensor res to %ix%i = (%i-%i)x(%i-%i)!\n",
 		ret = ov7670_write_array(sd, wsize->regs);
 #endif
 
-//ov7670_write_array(sd, ov7670_my_qvga_regs2 ); 
 
 	info->fmt = ovfmt;
         info->wsize = wsize; 
