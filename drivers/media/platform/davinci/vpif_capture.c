@@ -1104,6 +1104,9 @@ static int vpif_g_fmt_vid_cap(struct file *file, void *priv,
 	return 0;
 }
 
+
+static int vpif_s_dv_timings(struct file *file, void *priv, struct v4l2_dv_timings *timings);
+
 /**
  * vpif_s_fmt_vid_cap() - Set FMT handler
  * @file: file ptr
@@ -1138,11 +1141,20 @@ pr_err("vpif subdev %p\n", ch -> sd);
        .field = V4L2_FIELD_NONE,
     }
   };
-        ret = v4l2_subdev_call(ch->sd, pad, set_fmt, NULL, &subdev_format);  
+        ret = v4l2_subdev_call(ch->sd, pad, set_fmt, NULL, &subdev_format); 
+        if (ret) return ret;
+        struct v4l2_dv_timings timings;
+        ret = v4l2_subdev_call(ch->sd, video, g_dv_timings, &timings);
+        if (ret) return ret; 
 
+        struct v4l2_format prev_fmt = common->fmt;
 	/* store the format in the channel object */
 	common->fmt = *fmt;
-	return 0;
+
+        ret = vpif_s_dv_timings(file, priv, &timings); 
+        if (ret) common->fmt = prev_fmt; 
+
+	return ret;
 }
 
 /**
