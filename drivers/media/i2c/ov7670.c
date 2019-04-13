@@ -1079,7 +1079,7 @@ static int ov7670_set_fmt(struct v4l2_subdev *sd,
 	if (ret)
 		return ret;
 
-        v4l_dbg(3, debug, client, "!!!setting sensor res to %ix%i = (%i-%i)x(%i-%i)!\n", 
+        v4l_dbg(1, debug, client, "!!!setting sensor res to %ix%i = (%i-%i)x(%i-%i)!\n", 
             wsize -> width, wsize -> height, 
             wsize->hstart, wsize->hstop, wsize->vstart, wsize -> vstop); 
 
@@ -1705,7 +1705,7 @@ static int ov7670_probe(struct i2c_client *client,
 	sd = &info->sd;
 	v4l2_i2c_subdev_init(sd, client, &ov7670_ops);
 
-        v4l_dbg(3, debug, client, "ov7670 sd = %p\n", sd); 
+        v4l_dbg(1, debug, client, "ov7670 sd = %p\n", sd); 
 
 	info->clock_speed = 30; /* default: a guess */
 	if (client->dev.platform_data) {
@@ -1821,7 +1821,7 @@ static int ov7670_probe(struct i2c_client *client,
 	v4l2_ctrl_handler_setup(&info->hdl);
 
 	ret = v4l2_async_register_subdev(&info->sd);
-        v4l_dbg(3, debug, client, "ov7670: subdev name %s, ops %p\n", sd -> name, sd -> ops); 
+        v4l_dbg(1, debug, client, "ov7670: subdev name %s, ops %p\n", sd -> name, sd -> ops); 
 	if (ret < 0)
 		goto hdl_free;
 
