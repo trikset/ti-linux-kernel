@@ -344,7 +344,7 @@ static struct regval_list ov7670_default_regs[] = {
 	{ REG_HAECC5, 0xf0 },	{ REG_HAECC6, 0x90 },
 	{ REG_HAECC7, 0x94 },
 	{ REG_COM8, COM8_FASTAEC|COM8_AECSTEP|COM8_BFILT|COM8_AGC|COM8_AEC },
-#if 1
+#if 0
 	/* Almost all of these are magic "reserved" values.  */
 	{ REG_COM5, 0x61 },	{ REG_COM6, 0x4b },
 	{ 0x16, 0x02 },		{ REG_MVFP, 0x07 },
@@ -1086,12 +1086,8 @@ static int ov7670_set_fmt(struct v4l2_subdev *sd,
 			wsize->vstop);
 #endif
 	ret = 0;
-#if 1 
 	if (wsize->regs)
 		ret = ov7670_write_array(sd, wsize->regs);
-#endif
-
-
 	info->fmt = ovfmt;
         info->wsize = wsize; 
 
