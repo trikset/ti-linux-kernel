@@ -1240,11 +1240,6 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 
 	chan_cfg = &config->chan_config[ch->channel_id];
 	input = chan_cfg->inputs[ch->input_idx].input;
-#if 0 
-	if (input.capabilities != V4L2_IN_CAP_DV_TIMINGS) {
-		return -ENODATA;
-        } 
-#endif
 
 	if (timings->type != V4L2_DV_BT_656_1120) {
 		vpif_dbg(2, debug, "Timing type not defined\n");
@@ -1253,16 +1248,6 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 
 	if (vb2_is_busy(&common->buffer_queue))
 		return -EBUSY;
-#if 0 
-	/* Configure subdevice timings, if any */
-	ret = v4l2_subdev_call(ch->sd, video, s_dv_timings, timings);
-	if (ret == -ENOIOCTLCMD || ret == -ENODEV)
-		ret = 0;
-	if (ret < 0) {
-		vpif_dbg(2, debug, "Error setting custom DV timings\n");
-		return ret;
-	}
-#endif
 	if (!(timings->bt.width && timings->bt.height &&
 				(timings->bt.hbackporch ||
 				 timings->bt.hfrontporch ||
