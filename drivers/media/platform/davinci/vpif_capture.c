@@ -57,7 +57,7 @@ static struct device *vpif_dev;
 static void vpif_calculate_offsets(struct channel_obj *ch);
 static void vpif_config_addr(struct channel_obj *ch, int muxmode);
 
-static u8 channel_first_int[VPIF_NUMBER_OF_OBJECTS][2] = { {1, 1} };
+static u8 channel_first_int[VPIF_NUMBER_OF_OBJECTS][2] = { {1, 1}, {1, 1} };
 
 /* Is set to 1 in case of SDTV formats, 2 in case of HDTV formats. */
 static int ycmux_mode;
@@ -389,11 +389,10 @@ static irqreturn_t vpif_channel_isr(int irq, void *dev_id)
         if ((status  & (1 << 4)) != 0) vpif_dbg(2, debug, "ERROR ISR\n"); 
 
 	if (!vpif_intr_status(1) && !vpif_intr_status(0)) { 
-                regw(regr(VPIF_STATUS), VPIF_STATUS_CLR);
 		return IRQ_NONE;
         }
 
-        regw(regr(VPIF_STATUS), 3); 
+        regw(regr(VPIF_STATUS), VPIF_STATUS_CLR);
         for (channel_id = 0; channel_id < 2; ++channel_id)
         if ((status & (1 << channel_id)) != 0) { 
 		ch = dev->dev[channel_id];
@@ -1001,6 +1000,7 @@ static int vpif_try_fmt_vid_cap(struct file *file, void *priv,
 	pixfmt->width = common->fmt.fmt.pix.width;
 	pixfmt->height = common->fmt.fmt.pix.height;
 	pixfmt->sizeimage = pixfmt->bytesperline * pixfmt->height * 2;
+        pixfmt->pixelformat = V4L2_PIX_FMT_NV16; 
 	if (pixfmt->pixelformat == V4L2_PIX_FMT_SGRBG10) {
 		pixfmt->bytesperline = common->fmt.fmt.pix.width * 2;
 		pixfmt->sizeimage = pixfmt->bytesperline * pixfmt->height;
@@ -1240,9 +1240,11 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 
 	chan_cfg = &config->chan_config[ch->channel_id];
 	input = chan_cfg->inputs[ch->input_idx].input;
+#if 0 
 	if (input.capabilities != V4L2_IN_CAP_DV_TIMINGS) {
 		return -ENODATA;
         } 
+#endif
 
 	if (timings->type != V4L2_DV_BT_656_1120) {
 		vpif_dbg(2, debug, "Timing type not defined\n");
@@ -1603,8 +1605,11 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 
 		chan->input_count++;
 		chan->inputs[0].input.type = V4L2_INPUT_TYPE_CAMERA;
-		chan->inputs[0].input.std = V4L2_STD_ALL;
-		chan->inputs[0].input.capabilities = V4L2_IN_CAP_DV_TIMINGS; // V4L2_IN_CAP_STD;
+		chan->inputs[0].input.std = 0;
+		chan->inputs[0].input.capabilities = 0; // V4L2_IN_CAP_STD;
+                char* s = "vpif capture chan 0";
+                s[strlen(s) - 1] = '0' + i;
+                strcpy(chan->inputs[0].input.name, s); 
 
 		err = v4l2_fwnode_endpoint_parse(of_fwnode_handle(endpoint),
 						 &bus_cfg);
