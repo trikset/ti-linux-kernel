@@ -271,25 +271,6 @@ struct regval_list {
 	unsigned char value;
 };
 
-static struct regval_list ov7670_my_qvga_regs2[] = {
-// YUV 
-  { 0x12, 0 }, 
-  { 0xc, 4 }, 
-  { 0x3e, 0x19 }, 
-  { 0x70, 0x3A }, 
-  { 0x71, 0x35 }, 
-  { 0x72, 0x11 }, 
-  { 0x73, 0xf1 }, 
-
-// size
-  { 0xa2, 0x00 }, 
-  { 0x3a, 0x8 }, 
-  { 0x32, 0xb0 }, 
-
-  { 0xff, 0xff },
-};
-
-
 static struct regval_list ov7670_default_regs[] = {
 	{ REG_COM7, COM7_RESET },
 	{ REG_COM7, 0 },
@@ -787,7 +768,7 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
 		.vstop		= 492,
                 .hblank         = 928,
                 .vblank         = 255 - QVGA_HEIGHT, 
-		.regs		= ov7670_my_qvga_regs2,
+		.regs		= ov7670_my_qvga_regs,
 	},
 #if 0 
 	/* QCIF */
