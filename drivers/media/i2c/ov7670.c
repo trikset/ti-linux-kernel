@@ -29,7 +29,7 @@ MODULE_AUTHOR("Jonathan Corbet <corbet@lwn.net>");
 MODULE_DESCRIPTION("A low-level driver for OmniVision ov7670 sensors");
 MODULE_LICENSE("GPL");
 
-static bool debug;
+static bool debug = true;
 module_param(debug, bool, 0644);
 MODULE_PARM_DESC(debug, "Debug level (0-1)");
 
@@ -271,24 +271,6 @@ struct regval_list {
 	unsigned char value;
 };
 
-static struct regval_list regs_from_the_script[] = {
-  { 0x12, 0x80 }, 
-  { 0x12, 0x00 }, 
-// CCIR656
-  { 0x04, 0x40 }, 
-  { 0x40, 0x80 }, 
-
-  { 0xb0, 0x84 }, 
-
-// drive 1x
-   { 0x09, 0x00 }, 
-
-// gain ceiling, awb, agc, aec  
-  { 0x14, 0x1a }, 
-  { 0x13, 0x87 },
-  { 0xff, 0xff },
-};
-
 static struct regval_list ov7670_my_qvga_regs2[] = {
 // YUV 
   { 0x12, 0 }, 
@@ -310,10 +292,12 @@ static struct regval_list ov7670_my_qvga_regs2[] = {
 
 static struct regval_list ov7670_default_regs[] = {
 	{ REG_COM7, COM7_RESET },
+	{ REG_COM7, 0 },
 	{ REG_COM1, (1 << 6) },	/* CCIR601 enable */
 	{ REG_COM15, COM15_R01FE }, // Output range: 01 to FE
         { 0x09, 0x00 }, // drive 1x 
 
+#if 0 
 /*
  * Clock scale: 3 = 15fps
  *              2 = 20fps
@@ -334,6 +318,7 @@ static struct regval_list ov7670_default_regs[] = {
 	{ 0x70, 0x3a },		{ 0x71, 0x35 },
 	{ 0x72, 0x11 },		{ 0x73, 0xf0 },
 	{ 0xa2, 0x02 },		{ REG_COM10, 0x0 },
+#endif
 
 	/* Gamma curve values */
 	{ 0x7a, 0x20 },		{ 0x7b, 0x10 },
@@ -359,7 +344,7 @@ static struct regval_list ov7670_default_regs[] = {
 	{ REG_HAECC5, 0xf0 },	{ REG_HAECC6, 0x90 },
 	{ REG_HAECC7, 0x94 },
 	{ REG_COM8, COM8_FASTAEC|COM8_AECSTEP|COM8_BFILT|COM8_AGC|COM8_AEC },
-
+#if 1
 	/* Almost all of these are magic "reserved" values.  */
 	{ REG_COM5, 0x61 },	{ REG_COM6, 0x4b },
 	{ 0x16, 0x02 },		{ REG_MVFP, 0x07 },
@@ -376,7 +361,7 @@ static struct regval_list ov7670_default_regs[] = {
 	{ 0x9a, 0 },		{ 0xb0, 0x84 },
 	{ 0xb1, 0x0c },		{ 0xb2, 0x0e },
 	{ 0xb3, 0x82 },		{ 0xb8, 0x0a },
-
+#endif
 	/* More reserved magic, some of which tweaks white balance */
 	{ 0x43, 0x0a },		{ 0x44, 0xf0 },
 	{ 0x45, 0x34 },		{ 0x46, 0x58 },
@@ -395,14 +380,14 @@ static struct regval_list ov7670_default_regs[] = {
 	{ 0x51, 0 },		{ 0x52, 0x22 },
 	{ 0x53, 0x5e },		{ 0x54, 0x80 },
 	{ 0x58, 0x9e },
-
+#if 0
 	{ REG_COM16, COM16_AWBGAIN },	{ REG_EDGE, 0 },
 	{ 0x75, 0x05 },		{ 0x76, 0xe1 },
 	{ 0x4c, 0 },		{ 0x77, 0x01 },
 	{ REG_COM13, 0xc3 },	{ 0x4b, 0x09 },
 	{ 0xc9, 0x60 },		{ REG_COM16, 0x38 },
 	{ 0x56, 0x40 },
-
+#endif
 	{ 0x34, 0x11 },		{ REG_COM11, COM11_EXP|COM11_HZAUTO },
 	{ 0xa4, 0x88 },		{ 0x96, 0 },
 	{ 0x97, 0x30 },		{ 0x98, 0x20 },
@@ -633,7 +618,7 @@ static int ov7670_reset(struct v4l2_subdev *sd, u32 val)
 
 static int ov7670_init(struct v4l2_subdev *sd, u32 val)
 {
-	return ov7670_write_array(sd, regs_from_the_script);
+	return ov7670_write_array(sd, ov7670_default_regs);
 }
 
 static int ov7670_detect(struct v4l2_subdev *sd)
