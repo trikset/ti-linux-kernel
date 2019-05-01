@@ -295,11 +295,11 @@ static struct regval_list ov7670_default_regs[] = {
 	{ REG_HREF, 0xb6 },	{ REG_VSTART, 0x02 },
 	{ REG_VSTOP, 0x7a },	{ REG_VREF, 0x0a },
 	{ REG_COM3, 0 },	{ REG_COM14, 0 },
+#endif
 	/* Mystery scaling numbers */
 	{ 0x70, 0x3a },		{ 0x71, 0x35 },
 	{ 0x72, 0x11 },		{ 0x73, 0xf0 },
 	{ 0xa2, 0x02 },		{ REG_COM10, 0x0 },
-#endif
 
 	/* Gamma curve values */
 	{ 0x7a, 0x20 },		{ 0x7b, 0x10 },
@@ -705,16 +705,24 @@ static struct regval_list ov7670_qcif_regs[] = {
 	{ 0xff, 0xff },
 };
 
-static struct regval_list ov7670_my_qvga_regs[] = { 
-// set QVGA according to
-// Table 2-2. (but without input clock divider
-// and without SCALING_PCLK_DELAY)
-// OV7670/OV7171 CMOS VGA (640x480) CameraChip��™
-// Implementation Guide
+// regs for videomodes according to Table 2-2
+// of the OV7670/OV7171 CMOS VGA (640x480) 
+// CameraChip Implementation Guide
+// but without the CLKRC settings
 // 0x70 0x71 0x72 are already set in the section 
 //  "mystery scaling numbers" above 
- { REG_COM3, 4 },
+static struct regval_list ov7670_my_vga_regs[] = {
+  { REG_COM3, 0},
+  { REG_COM14, 0}, 
+  { 0x72, 0x11 },
+  { 0x73, 0xf0 }, 
+  { 0xff, 0xff },
+};
+
+static struct regval_list ov7670_my_qvga_regs[] = { 
+  { REG_COM3, 4 },
   { REG_COM14, COM14_DCWEN | 9 }, 
+  { 0x72, 0x11 }, 
   { 0x73, 0xf1 }, 
 // this was set to 2 in the guide, but it makes
 // image width less that 320. Setting this to 0
@@ -732,8 +740,15 @@ static struct regval_list ov7670_my_qvga_regs[] = {
   { 0xff, 0xff }, 
 };
 
+static struct regval_list ov7670_my_qqvga_regs[] = { 
+  { REG_COM3, 0x04 },
+  { REG_COM14, 0x1A }, 
+  { 0x72, 0x22 },
+  { 0x73, 0xF2 },
+  { 0xff, 0xff } 
+};
+
 static struct ov7670_win_size ov7670_win_sizes[] = {
-#if 0 
 	/* VGA */
 	{
 		.width		= VGA_WIDTH,
@@ -743,8 +758,11 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
 		.hstop		=  14,	/* Omnivision */
 		.vstart		=  10,
 		.vstop		= 490,
-		.regs		= NULL,
+		.hblank         = 288,
+		.vblank         = 30, 
+		.regs		= ov7670_my_vga_regs,
 	},
+#if 0 
 	/* CIF */
 	{
 		.width		= CIF_WIDTH,
@@ -770,6 +788,14 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
                 .vblank         = 255 - QVGA_HEIGHT, 
 		.regs		= ov7670_my_qvga_regs,
 	},
+        /* QQVGA YUYV */ 
+        {
+                .width          = QQVGA_WIDTH,
+                .height         = QQVGA_HEIGHT,
+                .hblank         = 1248, 
+                .vblank         = 8,
+                .regs           = ov7670_my_qqvga_regs
+        },  
 #if 0 
 	/* QCIF */
 	{
