@@ -716,6 +716,7 @@ static struct regval_list ov7670_my_vga_regs[] = {
   { REG_COM14, 0}, 
   { 0x72, 0x11 },
   { 0x73, 0xf0 }, 
+  { 0xa2, 2 }, 
   { 0xff, 0xff },
 };
 
@@ -728,7 +729,7 @@ static struct regval_list ov7670_my_qvga_regs[] = {
 // image width less that 320. Setting this to 0
 // helps but may spoil left/right boundary of
 // the video
-  {0xa2, 0x00},
+  {0xa2, 0x0},
 
 // I forgot why do I do that? 
    { REG_TSLB, 0x8 }, 
@@ -745,6 +746,7 @@ static struct regval_list ov7670_my_qqvga_regs[] = {
   { REG_COM14, 0x1A }, 
   { 0x72, 0x22 },
   { 0x73, 0xF2 },
+  { 0xa2, 2 }, 
   { 0xff, 0xff } 
 };
 
@@ -780,10 +782,16 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
 		.width		= QVGA_WIDTH,
 		.height		= QVGA_HEIGHT,
 		.com7_bit	= 0,
-		.hstart		= 168,	/* Empirically determined */
+		.hstart		= 136,	/* These values from */
+		.hstop		= 776,	/* Omnivision */
+		.vstart		=  10,
+		.vstop		= 490,
+#if 0
+	.hstart		= 168,	/* Empirically determined */
 		.hstop		=  24,
 		.vstart		=  12,
 		.vstop		= 492,
+#endif 
                 .hblank         = 928,
                 .vblank         = 255 - QVGA_HEIGHT, 
 		.regs		= ov7670_my_qvga_regs,
@@ -792,8 +800,12 @@ static struct ov7670_win_size ov7670_win_sizes[] = {
         {
                 .width          = QQVGA_WIDTH,
                 .height         = QQVGA_HEIGHT,
+ 		.hstart		= 158,	/* These values from */
+		.hstop		=  14,	/* Omnivision */
+		.vstart		=  10,
+		.vstop		= 490,
                 .hblank         = 1248, 
-                .vblank         = 8,
+                .vblank         = 7,
                 .regs           = ov7670_my_qqvga_regs
         },  
 #if 0 
@@ -1089,9 +1101,9 @@ static int ov7670_set_fmt(struct v4l2_subdev *sd,
 	 * Now write the rest of the array.  Also store start/stops
 	 */
 	ov7670_write_array(sd, ovfmt->regs + 1);
+#endif
 	ov7670_set_hw(sd, wsize->hstart, wsize->hstop, wsize->vstart,
 			wsize->vstop);
-#endif
 	ret = 0;
 	if (wsize->regs)
 		ret = ov7670_write_array(sd, wsize->regs);
