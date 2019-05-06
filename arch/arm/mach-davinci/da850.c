@@ -581,8 +581,6 @@ static struct clk_lookup da850_clks[] = {
 	CLK("ecap.0",		"fck",		&ecap0_clk),
 	CLK("ecap.1",		"fck",		&ecap1_clk),
 	CLK("ecap.2",		"fck",		&ecap2_clk),
-	CLK("1-0021",		"xclk",		&ref_clk),
-	CLK("2-0021",		"xclk",		&ref_clk),
 	CLK(NULL,		NULL,		NULL),
 };
 
