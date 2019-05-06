@@ -1,0 +1,35 @@
+#-----------------------------------------------------------
+# Vivado v2018.2 (64-bit)
+# SW Build 2258646 on Thu Jun 14 20:02:38 MDT 2018
+# IP Build 2256618 on Thu Jun 14 22:10:49 MDT 2018
+# Start of session at: Fri Dec 21 00:23:48 2018
+# Process ID: 31744
+# Current directory: /media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/TRIK/KirillSmirnov/ti-linux-kernel
+# Command line: vivado
+# Log file: /media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/TRIK/KirillSmirnov/ti-linux-kernel/vivado.log
+# Journal file: /media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/TRIK/KirillSmirnov/ti-linux-kernel/vivado.jou
+#-----------------------------------------------------------
+start_gui
+open_project /media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/DigitalSystemDesignCourse/07Sokolova/vhdl/vhdl/task4_2/task4_2.xpr
+update_compile_order -fileset sources_1
+open_hw
+connect_hw_server
+open_hw_target
+current_hw_device [get_hw_devices xc7z010_1]
+refresh_hw_device -update_hw_probes false [lindex [get_hw_devices xc7z010_1] 0]
+set_property PROGRAM.FILE {/media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/DigitalSystemDesignCourse/07Sokolova/vhdl/vhdl/task4_2/task4_2.runs/impl_1/design_1_wrapper.bit} [get_hw_devices xc7z010_1]
+set_property PROBES.FILE {/media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/DigitalSystemDesignCourse/07Sokolova/vhdl/vhdl/task4_2/task4_2.runs/impl_1/debug_nets.ltx} [get_hw_devices xc7z010_1]
+set_property FULL_PROBES.FILE {/media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/DigitalSystemDesignCourse/07Sokolova/vhdl/vhdl/task4_2/task4_2.runs/impl_1/debug_nets.ltx} [get_hw_devices xc7z010_1]
+refresh_hw_device [lindex [get_hw_devices xc7z010_1] 0]
+set_property PROBES.FILE {/media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/DigitalSystemDesignCourse/07Sokolova/vhdl/vhdl/task4_2/task4_2.runs/impl_1/debug_nets.ltx} [get_hw_devices xc7z010_1]
+set_property FULL_PROBES.FILE {/media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/DigitalSystemDesignCourse/07Sokolova/vhdl/vhdl/task4_2/task4_2.runs/impl_1/debug_nets.ltx} [get_hw_devices xc7z010_1]
+set_property PROGRAM.FILE {/media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/DigitalSystemDesignCourse/07Sokolova/vhdl/vhdl/task4_2/task4_2.runs/impl_1/design_1_wrapper.bit} [get_hw_devices xc7z010_1]
+program_hw_devices [get_hw_devices xc7z010_1]
+refresh_hw_device [lindex [get_hw_devices xc7z010_1] 0]
+display_hw_ila_data [ get_hw_ila_data hw_ila_data_1 -of_objects [get_hw_ilas -of_objects [get_hw_devices xc7z010_1] -filter {CELL_NAME=~"u_ila_0"}]]
+set_property TRIGGER_COMPARE_VALUE eq1'b1 [get_hw_probes design_1_i/avg_0/i_tvalid -of_objects [get_hw_ilas -of_objects [get_hw_devices xc7z010_1] -filter {CELL_NAME=~"u_ila_0"}]]
+run_hw_ila [get_hw_ilas -of_objects [get_hw_devices xc7z010_1] -filter {CELL_NAME=~"u_ila_0"}]
+wait_on_hw_ila [get_hw_ilas -of_objects [get_hw_devices xc7z010_1] -filter {CELL_NAME=~"u_ila_0"}]
+display_hw_ila_data [upload_hw_ila_data [get_hw_ilas -of_objects [get_hw_devices xc7z010_1] -filter {CELL_NAME=~"u_ila_0"}]]
+save_wave_config {/media/dours/fb10fcbc-d9d1-45ba-96c7-110886b7cfa4/home/dours/DigitalSystemDesignCourse/07Sokolova/vhdl/vhdl/task4_2/task4_2.hw/hw_1/wave/hw_ila_data_1/hw_ila_data_1.wcfg}
+close_hw

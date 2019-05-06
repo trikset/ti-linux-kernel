@@ -404,6 +404,7 @@
 /* da850 currently has the most gpio pins (144) */
 #define DAVINCI_N_GPIO			144
 /* da850 currently has the most irqs so use DA850_N_CP_INTC_IRQ */
-#define NR_IRQS				(DA850_N_CP_INTC_IRQ + DAVINCI_N_GPIO)
+/* Add 10 more irqs for virtual irq management */
+#define NR_IRQS				(DA850_N_CP_INTC_IRQ + DAVINCI_N_GPIO + 10)
 
 #endif /* __ASM_ARCH_IRQS_H */

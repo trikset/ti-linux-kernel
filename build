@@ -1,0 +1,1 @@
+make ARCH=arm CROSS_COMPILE=arm-unknown-linux-gnueabi- zImage -j 4

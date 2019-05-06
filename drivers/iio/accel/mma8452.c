@@ -1559,10 +1559,19 @@ static int mma8452_probe(struct i2c_client *client,
 		goto trigger_cleanup;
 
 	if (client->irq) {
+		/*
+		 * Our irq is level triggered. Unfortunately, irq lines
+		 * may be wired GPIOs, that support only edge triggering,
+		 * e.g. davinci.
+		 * Workaround: use OF data to configure irq trigger.
+		 */
+		unsigned long irq_trig =
+			irqd_get_trigger_type(irq_get_irq_data(client->irq));
+
 		ret = devm_request_threaded_irq(&client->dev,
 						client->irq,
 						NULL, mma8452_interrupt,
-						IRQF_TRIGGER_LOW | IRQF_ONESHOT,
+						irq_trig | IRQF_ONESHOT,
 						client->name, indio_dev);
 		if (ret)
 			goto buffer_cleanup;

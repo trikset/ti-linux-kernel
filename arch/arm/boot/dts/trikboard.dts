@@ -12,7 +12,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/linux-event-codes.h>
 
-// cannot include include/linux/platform_data/gpio-davinci.h into a .dts  
+// cannot include include/linux/platform_data/gpio-davinci.h into a .dts
 #define GPIO_TO_PIN(bank, gpio) (16 * (bank) + (gpio))
 
 
@@ -53,14 +53,17 @@
 			};
 			mcasp0_pins: pinmux_mcasp0_pins {
 				pinctrl-single,bits = <
-					/*
-					 * AHCLKX, ACLKX, AFSX, AHCLKR, ACLKR,
-					 * AFSR, AMUTE
-					 */
-					0x00 0x11111111 0xffffffff
-					/* AXR11, AXR12 */
-					0x04 0x00011000 0x000ff000
+					/* * AHCLKX, AFSX, ACLKX */
+					0x00 0x00101010 0x00f0f0f0
+					/* AXR9 */
+					0x04 0x01000000 0x0f000000
+					/* AXR7 */
+					0x08 0x00000001 0x0000000f
 				>;
+			};
+			tlv320_reset_pin: pinmux_tlv320_reset_pin {
+				/* GP6[15] */
+				pinctrl-single,bits = <0x34 0x00000008 0x0000000f>;
 			};
 			nand_pins: nand_pins {
 				pinctrl-single,bits = <
@@ -76,13 +79,7 @@
 					0x30 0x01100000  0x0ff00000
 				>;
 			};
-			spi0_cs1_pin: pinmux_spi0_cs1 {
-				pinctrl-single,bits = <
-					/* CS1 */
-					0x10 0x00000001 0x000000f0
-				>;
-			};
-			spi1_cs1_pin: pinmux_spi1_cs1 {
+			spi1_cs0_pin: pinmux_spi1_cs0 {
 				pinctrl-single,bits = <
 					/* GP4[9] */
 					0x24 0x08000000 0x0f000000
@@ -94,8 +91,48 @@
 					0x2c 0x00080000 0x000f0000
 				>;
 			};
-			lcd_pins: pinmux_lcd_pins {
+			bluetooth_en_pin: pinmux_bluetooth_en {
 				pinctrl-single,bits = <
+					/* GP6[11] */
+					0x34 0x00080000 0x000f0000
+				>;
+			};
+			button_pins: pinmux_button_pins {
+				pinctrl-single,bits = <
+					/* GP2[7], GP2[0] */
+					0x18 0x80000008 0xf000000f
+					/* GP3[13], GP3[15], GP3[12] */
+					0x1C 0x00008808 0x0000ff0f
+					/* GP3[4] */
+					0x20 0x00008000 0x0000f000
+					/* GP1[9] */
+					0x08 0x04000000 0x0f000000
+				>;
+			};
+			lcd_gpio_pins: pinmux_lcd_gpio_pins {
+				pinctrl-single,bits = <
+					/* LCD_BACKLIGHT */
+					0x34 0x00008000 0x0000f000
+					/*
+					 * LCD_D[2], LCD_D[3], LCD_D[4], LCD_D[5],
+					 * LCD_D[6], LCD_D[7]
+					 */
+					0x40 0x88888800 0xffffff00
+					/*
+					 * LCD_D[10], LCD_D[11], LCD_D[12], LCD_D[13],
+					 * LCD_D[14], LCD_D[15], LCD_D[0], LCD_D[1]
+					 */
+					0x44 0x88888888 0xffffffff
+					/* LCD_RESET, LCD_RD, LCD_D[8], LCD_D[9] */
+					0x48 0x88000088 0xff0000ff
+					/* LCD_CS, LCD_RS, LCD_WR */
+					0x4c 0x08000088 0x0f0000ff
+				>;
+			};
+			lcd_tilcdc_pins: pinmux_lcd_tilcdc_pins {
+				pinctrl-single,bits = <
+					/* LCD_BACKLIGHT */
+					0x34 0x00008000 0x0000f000
 					/*
 					 * LCD_D[2], LCD_D[3], LCD_D[4], LCD_D[5],
 					 * LCD_D[6], LCD_D[7]
@@ -106,56 +143,37 @@
 					 * LCD_D[14], LCD_D[15], LCD_D[0], LCD_D[1]
 					 */
 					0x44 0x22222222 0xffffffff
-					/* LCD_D[8], LCD_D[9] */
-					0x48 0x00000022 0x000000ff
-
-					/* LCD_PCLK, GP8[10] (reset)  */
-					0x48 0x82000000 0xff000000
-					/* LCD_AC_ENB_CS, LCD_VSYNC, LCD_HSYNC */
+					/* LCD_RESET, LCD_RD, LCD_D[8], LCD_D[9] */
+					0x48 0x82000022 0xff0000ff
+					/* LCD_CS, LCD_RS, LCD_WR */
 					0x4c 0x02000022 0x0f0000ff
-                                        /* GP6[12] (backlight) */ 
-                                        0x34 0x00008000 0x0000f000 
-                                        
 				>;
 			};
-                        /* pins to enable power_connectors and the voltage translators ,
-                           reset and program and interrupt pin for the MSP, resets for the video modules,
-                           LCD backlight 
-                           JD ports controls 
-                           some "GPIO" PCB signals 
-                        */
-                        gpios_to_userspace: pinmux_gpios_to_userspace {
-                                pinctrl-single,bits = <
-                                /* GP5[14], 5[13], 5[9, 8, 7, 6, 5, 4, 3, 0] */
-                                0x2c 0x88000880 0xff000ff0
-                                0x30 0x80088888 0xf00fffff 
-                                /* GP3[7, 5, 3, 2, 1] */
-                                0x20 0x08880808 0x0fff0f0f
-                                /* GP2[5, 4, 3, 2, 1] */ 
-                                0x18 0x08888800 0x0fffff00 
-                                /* GP6[13] */  
-                                0x34 0x00000800 0x00000f00 
-                                /* 1[12, 11, 10] */
-                                0x08 0x00444000 0x00fff000
-                                /* GP0[2, 3, 4] */
-                                0x04 0x00888000 0x00fff000 
-                                >; 
-                        };
-                        button_pins: pinmux_button_pins {
-                                pinctrl-single,bits = <
-                                       /* GP2[7], GP2[0] */
-                                       0x18 0x80000008 0xf000000f  
-                                       /* GP3[13], GP3[15], GP3[12] */
-                                       0x1C 0x00008808 0x0000ff0f 
-                                       /* GP3[4] */
-                                       0x20 0x00008000 0x0000f000 
-                                       /* GP1[9] */
-                                       0x08 0x04000000 0x0f000000 
-                               >;
-                       };
-         	};
+			gyro_pins: pinmux_gyro_pins {
+				pinctrl-single,bits = <
+					/* INT1 (GP2[8]) and DRDY(GP2[9]) */
+					0x14 0x88000000 0xff000000
+				>;
+			};
+			accel_pins: pinmux_accel_pins {
+				pinctrl-single,bits = <
+					/* INT1 (GP5[3]) and INT2 (GP5[4]) */
+					0x30 0x00088000 0x000ff000
+				>;
+			};
+		};
 		serial0: serial@42000 {
 			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&serial0_rxtx_pins &serial0_rtscts_pins &bluetooth_en_pin>;
+			auto-flow-control;
+			no-loopback-test;
+
+			bluetooth {
+				compatible = "ti,wl1271-st";
+				enable-gpios = <&gpio 107 GPIO_ACTIVE_HIGH>;
+				status = "okay";
+			};
 		};
 		serial1: serial@10c000 {
 			status = "okay";
@@ -163,31 +181,31 @@
 		serial2: serial@10d000 {
 			status = "okay";
 		};
-                ehrpwm0: pwm@300000 {
-                        pinctrl-names = "default";
-                        pinctrl-0 = <&ehrpwm0b_pins>; 
-                        status = "okay";
-                }; 
-                ehrpwm1: pwm@302000 {
-                        pinctrl-names = "default";
-                        pinctrl-0 = <&ehrpwm1a_pins &ehrpwm1b_pins>; 
-                        status = "okay";
-                }; 
-                ecap0: ecap@306000 {
-                        pinctrl-names = "default";
-			pinctrl-0 = <&ecap0_pins>; 
-		        status = "okay";
-                };
-                ecap1: ecap@307000 {
-                        pinctrl-names = "default";
-			pinctrl-0 = <&ecap1_pins>; 
-		        status = "okay";
-                };
-                ecap2: ecap@308000 {
-                        pinctrl-names = "default";
-			pinctrl-0 = <&ecap2_pins>; 
-		        status = "okay";
-                };
+		ehrpwm0: pwm@300000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ehrpwm0b_pins>;
+			status = "okay";
+		};
+		ehrpwm1: pwm@302000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ehrpwm1a_pins &ehrpwm1b_pins>;
+			status = "okay";
+		};
+		ecap0: ecap@306000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap0_pins>;
+			status = "okay";
+		};
+		ecap1: ecap@307000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap1_pins>;
+			status = "okay";
+		};
+		ecap2: ecap@308000 {
+			pinctrl-names = "default";
+			pinctrl-0 = <&ecap2_pins>;
+			status = "okay";
+		};
 		rtc0: rtc@23000 {
 			status = "okay";
 		};
@@ -208,16 +226,29 @@
 				compatible = "ti,tlv320aic3106";
 				reg = <0x18>;
 				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&tlv320_reset_pin>;
 
 				/* Regulators */
 				IOVDD-supply = <&cr_3_3>;
 				AVDD-supply = <&cr_3_3>;
 				DRVDD-supply = <&cr_3_3>;
 				DVDD-supply = <&cr_1_8>;
+
+				ai3x-micbias-vg = <1>; /* Bias 2V */
+
+				/* Reset pin*/
+				gpio-reset = <&gpio 111 GPIO_ACTIVE_HIGH>;
 			};
 			mma845x: mma845x@1c {
 				compatible = "fsl,mma8451";
+				pinctrl-names = "default";
+				pinctrl-0 = <&accel_pins>;
 				reg = <0x1c>;
+				interrupt-parent = <&gpio>;
+				/* INT1 is connected but left unused */
+				interrupts = <84 IRQ_TYPE_EDGE_FALLING>;
+				interrupt-names = "INT2";
 				status = "okay";
 			};
 			ds4420: ds4420@50 {
@@ -260,53 +291,50 @@
 		spi0: spi@41000 {
 			status = "okay";
 			pinctrl-names = "default";
-			pinctrl-0 = <&spi0_pins &spi0_cs0_pin &spi0_cs1_pin>;
+			pinctrl-0 = <&spi0_pins &spi0_cs0_pin>;
 			flash: m25p80@0 {
 				#address-cells = <1>;
 				#size-cells = <1>;
-				compatible = "m25p64";
+				compatible = "m25p128";
 				spi-max-frequency = <30000000>;
 				m25p,fast-read;
 				reg = <0>;
 				partition@0 {
-					label = "U-Boot-SPL";
-					reg = <0x00000000 0x00010000>;
-					read-only;
+					label = "uboot";
+					reg = <0x00000000 0x00080000>;
 				};
 				partition@1 {
-					label = "U-Boot";
-					reg = <0x00010000 0x00080000>;
-					read-only;
+					label = "uboot-env";
+					reg = <0x00080000 0x00040000>;
 				};
 				partition@2 {
-					label = "U-Boot-Env";
-					reg = <0x00090000 0x00010000>;
-					read-only;
+					label = "kernel";
+					reg = <0x000c0000 0x00440000>;
 				};
 				partition@3 {
-					label = "Kernel";
-					reg = <0x000a0000 0x00280000>;
-				};
-				partition@4 {
-					label = "Filesystem";
-					reg = <0x00320000 0x00400000>;
-				};
-				partition@5 {
-					label = "MAC-Address";
-					reg = <0x007f0000 0x00010000>;
-					read-only;
+					label = "RootFS";
+					reg = <0x00500000 0x00b00000>;
 				};
 			};
 		};
 		spi1: spi@30e000 {
 			status = "okay";
 			pinctrl-names = "default";
-			pinctrl-0 = <&spi1_pins &spi1_cs1_pin>;
-			cs-gpios = <&gpio 73 0>;
+			pinctrl-0 = <&spi1_pins &spi1_cs0_pin>;
+			cs-gpios = <&gpio 73 GPIO_ACTIVE_HIGH>;
+			num-cs = <1>;
 			l3gd20: l3gd20@0 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&gyro_pins>;
 				compatible = "st,l3gd20-gyro";
 				spi-max-frequency = <10000000>;
 				reg = <0>;
+				st,drdy-int-pin = <2>;
+				interrupt-parent = <&gpio>;
+				interrupts = <
+					41 IRQ_TYPE_EDGE_RISING /* DRDY */
+					40 IRQ_TYPE_EDGE_RISING /* INT1 */
+					>;
 			};
 		};
 		mdio: mdio@224000 {
@@ -316,69 +344,65 @@
 			bus_freq = <2200000>;
 		};
 		gpio: gpio@226000 {
-                  /*      pinctrl-names = "default";
-                        pinctrl-0 = <&gpios_to_userspace>; */
 			status = "okay";
 		};
-
-                gpio-keys {
-                        compatible = "gpio-keys";
-                        #address-cells = <1>;
-                        #size-cells = <0>;
-                        pinctrl-names = "default";
-                        pinctrl-0 = <&button_pins &gpios_to_userspace>;
-                        autorepeat;
-                        sw1  {
-                             label = "sw1";
-                             gpios = <&gpio GPIO_TO_PIN(2, 7) GPIO_ACTIVE_LOW>;
-                             linux,code = <KEY_POWER>; 
-                             gpio-key;
-                             autorepeat;
-                        }; 
-                        sw6  {
-                             label = "sw6";
-                             gpios = <&gpio GPIO_TO_PIN(3, 13) GPIO_ACTIVE_LOW>;
-                             linux,code = <KEY_DOWN>; 
-                             gpio-key;
-                             autorepeat;
-                        }; 
-                        sw2  {
-                             label = "sw2";
-                             gpios = <&gpio GPIO_TO_PIN(3, 4) GPIO_ACTIVE_LOW>;
-                             linux,code = <KEY_UP>; 
-                             gpio-key;
-                             autorepeat;
-                        }; 
-                        sw3  {
-                             label = "sw3";
-                             gpios = <&gpio GPIO_TO_PIN(2, 0) GPIO_ACTIVE_LOW>;
-                             linux,code = <KEY_ESC>; 
-                             gpio-key;
-                             autorepeat;
-                        }; 
-                        sw4  {
-                             label = "sw4";
-                             gpios = <&gpio GPIO_TO_PIN(1, 9) GPIO_ACTIVE_LOW>;
-                             linux,code = <KEY_LEFT>;
-                             gpio-key;
-                             autorepeat;
-                        }; 
-                        sw5  {
-                             label = "sw5";
-                             gpios = <&gpio GPIO_TO_PIN(3, 15) GPIO_ACTIVE_LOW>;
-                             linux,code = <KEY_RIGHT>; 
-                             gpio-key;
-                             autorepeat;
-                        }; 
-                        sw7  {
-                             label = "sw7";
-                             gpios = <&gpio GPIO_TO_PIN(3, 12) GPIO_ACTIVE_LOW>;
-                             linux,code = <KEY_ENTER>; 
-                             gpio-key;
-                             autorepeat;
-                        }; 
-                };
-
+		gpio-keys {
+			compatible = "gpio-keys";
+			#address-cells = <1>;
+			#size-cells = <0>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&button_pins>;
+			autorepeat;
+			sw1 {
+				label = "sw1";
+				gpios = <&gpio GPIO_TO_PIN(2, 7) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_POWER>;
+				gpio-key;
+				autorepeat;
+			};
+			sw2 {
+				label = "sw2";
+				gpios = <&gpio GPIO_TO_PIN(3, 4) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_UP>;
+				gpio-key;
+				autorepeat;
+			};
+			sw3 {
+				label = "sw3";
+				gpios = <&gpio GPIO_TO_PIN(2, 0) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_ESC>;
+				gpio-key;
+				autorepeat;
+			};
+			sw4 {
+				label = "sw4";
+				gpios = <&gpio GPIO_TO_PIN(1, 9) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_LEFT>;
+				gpio-key;
+				autorepeat;
+			};
+			sw5 {
+				label = "sw5";
+				gpios = <&gpio GPIO_TO_PIN(3, 15) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_RIGHT>;
+				gpio-key;
+				autorepeat;
+			};
+			sw6 {
+				label = "sw6";
+				gpios = <&gpio GPIO_TO_PIN(3, 13) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_DOWN>;
+				gpio-key;
+				autorepeat;
+			};
+			sw7 {
+				label = "sw7";
+				gpios = <&gpio GPIO_TO_PIN(3, 12) GPIO_ACTIVE_LOW>;
+				linux,code = <KEY_ENTER>;
+				gpio-key;
+				autorepeat;
+			};
+		};
 		usb0: usb@200000 {
 			dr_mode = "host";
 			status = "okay";
@@ -390,6 +414,56 @@
 			usb_phy: usb-phy {
 				status = "okay";
 			};
+		};
+		display-gpio {
+			compatible = "sitronix,st7789v";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lcd_gpio_pins>;
+
+			/* Driver hack: ACTIVE_<VAL> gpio is treated as INITIAL_<VAL> */
+			reset-gpios = <&gpio 138 GPIO_ACTIVE_HIGH>;
+			dc-gpios = <&gpio 136 GPIO_ACTIVE_LOW>;
+			rd-gpios = <&gpio 139 GPIO_ACTIVE_HIGH>;
+			wr-gpios = <&gpio 137 GPIO_ACTIVE_HIGH>;
+			cs-gpios = <&gpio 96 GPIO_ACTIVE_HIGH>;
+			db-gpios = <
+				&gpio 120 GPIO_ACTIVE_LOW
+				&gpio 121 GPIO_ACTIVE_LOW
+				&gpio 122 GPIO_ACTIVE_LOW
+				&gpio 123 GPIO_ACTIVE_LOW
+				&gpio 124 GPIO_ACTIVE_LOW
+				&gpio 125 GPIO_ACTIVE_LOW
+				&gpio 126 GPIO_ACTIVE_LOW
+				&gpio 127 GPIO_ACTIVE_LOW
+				&gpio 112 GPIO_ACTIVE_LOW
+				&gpio 113 GPIO_ACTIVE_LOW
+				&gpio 114 GPIO_ACTIVE_LOW
+				&gpio 115 GPIO_ACTIVE_LOW
+				&gpio 116 GPIO_ACTIVE_LOW
+				&gpio 117 GPIO_ACTIVE_LOW
+				&gpio 118 GPIO_ACTIVE_LOW
+				&gpio 119 GPIO_ACTIVE_LOW
+			>;
+			led-gpios = <&gpio 108 GPIO_ACTIVE_LOW>;
+
+			buswidth = <16>;
+			regwidth = <16>;
+			backlight = <1>;
+			status = "disabled";
+		};
+		display-tilcdc {
+			compatible = "sitronix,st7789v-tilcdc";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lcd_tilcdc_pins>;
+
+			/* Driver hack: ACTIVE_<VAL> gpio is treated as INITIAL_<VAL> */
+			reset-gpios = <&gpio 138 GPIO_ACTIVE_HIGH>;
+			led-gpios = <&gpio 108 GPIO_ACTIVE_LOW>;
+
+			buswidth = <16>;
+			regwidth = <16>;
+			backlight = <1>;
+			status = "okay";
 		};
 	};
 	vbat: fixedregulator0 {
@@ -427,15 +501,18 @@
 
 	sound {
 		compatible = "simple-audio-card";
-		simple-audio-card,name = "DA850/OMAP-L138 EVM";
+		simple-audio-card,name = "DA850/OMAP-L138 TRIK";
 		simple-audio-card,widgets =
-			"Line", "Line In",
-			"Line", "Line Out";
+			"Microphone", "Stereo Mic",
+			"Line", "Speaker",
+			"Headphone", "Headphone Jack";
 		simple-audio-card,routing =
-			"LINE1L", "Line In",
-			"LINE1R", "Line In",
-			"Line Out", "LLOUT",
-			"Line Out", "RLOUT";
+			"LINE2L", "Stereo Mic",
+			"LINE2R", "Stereo Mic",
+			"Stereo Mic", "Mic Bias",
+			"Speaker", "LLOUT",
+			"Headphone Jack", "HPROUT",
+			"Headphone Jack", "HPLOUT";
 		simple-audio-card,format = "dsp_b";
 		simple-audio-card,bitclock-master = <&link0_codec>;
 		simple-audio-card,frame-master = <&link0_codec>;
@@ -443,20 +520,14 @@
 
 		simple-audio-card,cpu {
 			sound-dai = <&mcasp0>;
-			system-clock-frequency = <24576000>;
+			system-clock-frequency = <24000000>;
 		};
 
 		link0_codec: simple-audio-card,codec {
 			sound-dai = <&tlv320aic3106>;
-			system-clock-frequency = <24576000>;
+			system-clock-frequency = <24000000>;
 		};
 	};
-
-        lcd { 
-                compatible = "hack,ili9340";
- 		pinctrl-names = "default";
-		pinctrl-0 = <&lcd_pins>;
-       }; 
 };
 
 &mcasp0 {
@@ -470,12 +541,12 @@
 	/* 4 serializer */
 	serial-dir = <  /* 0: INACTIVE, 1: TX, 2: RX */
 		0 0 0 0
-		0 0 0 0
 		0 0 0 1
-		2 0 0 0
+		0 2 0 0
+		0 0 0 0
 	>;
-	tx-num-evt = <32>;
-	rx-num-evt = <32>;
+	tx-num-evt = <1>;
+	rx-num-evt = <1>;
 };
 
 &edma0 {
