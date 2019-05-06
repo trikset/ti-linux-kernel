@@ -16,8 +16,6 @@
  *	  add static buffer allocation
  */
 
-//#define ISR_PRINTERS 
-
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/of_graph.h>
@@ -57,7 +55,7 @@ static struct device *vpif_dev;
 static void vpif_calculate_offsets(struct channel_obj *ch);
 static void vpif_config_addr(struct channel_obj *ch, int muxmode);
 
-static u8 channel_first_int[VPIF_NUMBER_OF_OBJECTS][2] = { {1, 1}, {1, 1} };
+static u8 channel_first_int[VPIF_NUMBER_OF_OBJECTS][2] = { {1, 1} };
 
 /* Is set to 1 in case of SDTV formats, 2 in case of HDTV formats. */
 static int ycmux_mode;
@@ -219,7 +217,6 @@ static int vpif_start_streaming(struct vb2_queue *vq, unsigned int count)
 	/* Remove buffer from the buffer queue */
 	list_del(&common->cur_frm->list);
 	spin_unlock_irqrestore(&common->irqlock, flags);
-        vpif_dbg(3, debug, "start_streaming: list_del %p\n", &common->cur_frm->list); 
 
 	addr = vb2_dma_contig_plane_dma_addr(&common->cur_frm->vb.vb2_buf, 0);
 
@@ -227,8 +224,6 @@ static int vpif_start_streaming(struct vb2_queue *vq, unsigned int count)
 			 addr + common->ybtm_off,
 			 addr + common->ctop_off,
 			 addr + common->cbtm_off);
-
-        vpif_dbg(3, debug, "ch->channel_id %i ,  ycmux_mode %i\n", ch->channel_id, ycmux_mode); 
 
 	/**
 	 * Set interrupt for both the fields in VPIF Register enable channel in
@@ -385,12 +380,10 @@ static irqreturn_t vpif_channel_isr(int irq, void *dev_id)
 	int channel_id;
 	int fid = -1, i;
         int status = regr(VPIF_STATUS); 
-        
-        if ((status  & (1 << 4)) != 0) vpif_dbg(2, debug, "ERROR ISR\n"); 
 
-	if (!vpif_intr_status(1) && !vpif_intr_status(0)) { 
-		return IRQ_NONE;
-        }
+        if ((status  & (1 << 4)) != 0) vpif_dbg(3, debug, "ERROR ISR\n"); 
+
+	if (!vpif_intr_status(1) && !vpif_intr_status(0)) return IRQ_NONE;
 
         regw(regr(VPIF_STATUS), VPIF_STATUS_CLR);
         for (channel_id = 0; channel_id < 2; ++channel_id)
@@ -516,6 +509,7 @@ static int vpif_update_std_info(struct channel_obj *ch)
 			return 0;
 		}
 	}
+
 	for (index = 0; index < vpif_ch_params_count; index++) {
 		config = &vpif_ch_params[index];
 		if (config->hd_sd == 0) {
@@ -892,10 +886,8 @@ static int vpif_enum_input(struct file *file, void *priv,
 
 	chan_cfg = &config->chan_config[ch->channel_id];
 
-	if (input->index >= chan_cfg->input_count) { 
-vpif_dbg(1, debug, "chan_cfg->input_count= %i\n", chan_cfg->input_count); 
+	if (input->index >= chan_cfg->input_count)  
 		return -EINVAL;
-        }
 
 	memcpy(input, &chan_cfg->inputs[input->index].input,
 		sizeof(*input));
@@ -932,17 +924,13 @@ static int vpif_s_input(struct file *file, void *priv, unsigned int index)
 	struct vpif_capture_chan_config *chan_cfg;
 
 	chan_cfg = &config->chan_config[ch->channel_id];
-vpif_dbg(1, debug, "vpif_s_input \n"); 
 
-	if (index >= chan_cfg->input_count) {
-vpif_dbg(1, debug, "vpif_s_input EINVAL \n"); 
+	if (index >= chan_cfg->input_count) 
 		return -EINVAL;
-}
 
-	if (vb2_is_busy(&common->buffer_queue)) {
-vpif_dbg(1, debug, "vpif_s_input EBUSY \n"); 
+	if (vb2_is_busy(&common->buffer_queue)) 
 		return -EBUSY;
-}
+
 
 	return vpif_set_input(config, ch, index);
 }
@@ -992,7 +980,7 @@ static int vpif_try_fmt_vid_cap(struct file *file, void *priv,
 	struct common_obj *common = &(ch->common[VPIF_VIDEO_INDEX]);
 
 	common->fmt = *fmt;
-// 	vpif_update_std_info(ch);
+// 	vpif_update_std_info(ch); this is set after a call to s_dv_timings_internal in the s_fmt
 
 	pixfmt->field = common->fmt.fmt.pix.field;
 	pixfmt->colorspace = common->fmt.fmt.pix.colorspace;
@@ -1000,7 +988,6 @@ static int vpif_try_fmt_vid_cap(struct file *file, void *priv,
 	pixfmt->width = common->fmt.fmt.pix.width;
 	pixfmt->height = common->fmt.fmt.pix.height;
 	pixfmt->sizeimage = pixfmt->bytesperline * pixfmt->height * 2;
-        pixfmt->pixelformat = V4L2_PIX_FMT_NV16; 
 	if (pixfmt->pixelformat == V4L2_PIX_FMT_SGRBG10) {
 		pixfmt->bytesperline = common->fmt.fmt.pix.width * 2;
 		pixfmt->sizeimage = pixfmt->bytesperline * pixfmt->height;
@@ -1074,7 +1061,8 @@ static int vpif_g_fmt_vid_cap(struct file *file, void *priv,
 }
 
 
-static int vpif_s_dv_timings(struct file *file, void *priv, struct v4l2_dv_timings *timings);
+static int vpif_s_dv_timings_internal(struct file *file, void *priv,
+                struct v4l2_dv_timings *timings, bool check_capabilities);
 
 /**
  * vpif_s_fmt_vid_cap() - Set FMT handler
@@ -1109,18 +1097,18 @@ static int vpif_s_fmt_vid_cap(struct file *file, void *priv,
                  .field = V4L2_FIELD_NONE,
             }
         };
-        ret = v4l2_subdev_call(ch->sd, pad, set_fmt, NULL, &subdev_format); 
+        ret = v4l2_subdev_call(ch->sd, pad, set_fmt, NULL, &subdev_format);
         if (ret) return ret;
         struct v4l2_dv_timings timings;
         ret = v4l2_subdev_call(ch->sd, video, g_dv_timings, &timings);
-        if (ret) return ret; 
+        if (ret) return ret;
 
         struct v4l2_format prev_fmt = common->fmt;
 	/* store the format in the channel object */
 	common->fmt = *fmt;
 
-        ret = vpif_s_dv_timings(file, priv, &timings); 
-        if (ret) common->fmt = prev_fmt; 
+        ret = vpif_s_dv_timings_internal(file, priv, &timings, false);
+        if (ret) common->fmt = prev_fmt;
 
 	return ret;
 }
@@ -1218,8 +1206,8 @@ vpif_query_dv_timings(struct file *file, void *priv,
  * @priv: file handle
  * @timings: digital video timings
  */
-static int vpif_s_dv_timings(struct file *file, void *priv,
-		struct v4l2_dv_timings *timings)
+static int vpif_s_dv_timings_internal(struct file *file, void *priv,
+		struct v4l2_dv_timings *timings, bool check_capabilities)
 {
 	struct vpif_capture_config *config = vpif_dev->platform_data;
 	struct video_device *vdev = video_devdata(file);
@@ -1227,19 +1215,20 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	struct vpif_params *vpifparams = &ch->vpifparams;
 	struct vpif_channel_config_params *std_info = &vpifparams->std_info;
 	struct common_obj *common = &ch->common[VPIF_VIDEO_INDEX];
+        struct v4l2_pix_format *pix = &common->fmt.fmt.pix; 
 	struct video_obj *vid_ch = &ch->video;
 	struct v4l2_bt_timings *bt = &vid_ch->dv_timings.bt;
 	struct vpif_capture_chan_config *chan_cfg;
 	struct v4l2_input input;
 	int ret;
 
-
-	if (!config->chan_config[ch->channel_id].inputs) {
+	if (!config->chan_config[ch->channel_id].inputs)
 		return -ENODATA;
-        }
 
 	chan_cfg = &config->chan_config[ch->channel_id];
 	input = chan_cfg->inputs[ch->input_idx].input;
+        if (input.capabilities != V4L2_IN_CAP_DV_TIMINGS && check_capabilities)
+                return -ENODATA;
 
 	if (timings->type != V4L2_DV_BT_656_1120) {
 		vpif_dbg(2, debug, "Timing type not defined\n");
@@ -1264,7 +1253,8 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	/* Configure video port timings */
 
 	std_info->eav2sav = V4L2_DV_BT_BLANKING_WIDTH(bt) - 8;
-	std_info->sav2eav = bt->width * 2; // TODO: bytes per pixel not 2!
+        if (v4l2_fourcc('N', 'V', '1', '6') != pix->pixelformat) return -EINVAL;
+	std_info->sav2eav = bt->width * 2; // TODO: bytes per pixel not 2! pix->bytesperline is incorrect here
 
 	std_info->l1 = 1;
 	std_info->l3 = bt->vsync + bt->vbackporch + 1;
@@ -1370,14 +1360,14 @@ static const struct v4l2_ioctl_ops vpif_ioctl_ops = {
 	.vidioc_streamon		= vb2_ioctl_streamon,
 	.vidioc_streamoff		= vb2_ioctl_streamoff,
 
-/*
+/*  TV standards are not to be used with ov7670
 	.vidioc_querystd		= vpif_querystd,
 	.vidioc_s_std			= vpif_s_std,
 	.vidioc_g_std			= vpif_g_std,
 */
 	.vidioc_enum_dv_timings		= vpif_enum_dv_timings,
 	.vidioc_query_dv_timings	= vpif_query_dv_timings,
-	.vidioc_s_dv_timings		= vpif_s_dv_timings,
+//	.vidioc_s_dv_timings		= vpif_s_dv_timings,
 	.vidioc_g_dv_timings		= vpif_g_dv_timings,
 
 	.vidioc_log_status		= vpif_log_status,
@@ -1594,15 +1584,15 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 		chan->inputs[0].input.capabilities = 0; // V4L2_IN_CAP_STD;
                 char* s = "vpif capture chan 0";
                 s[strlen(s) - 1] = '0' + i;
-                strcpy(chan->inputs[0].input.name, s); 
+                strcpy(chan->inputs[0].input.name, s);
 
 		err = v4l2_fwnode_endpoint_parse(of_fwnode_handle(endpoint),
 						 &bus_cfg);
 		if (err) {
-			vpif_dbg(1, debug,  "Could not parse the endpoint\n");
+			dev_err(&pdev->dev, "Could not parse the endpoint\n");
 			goto done;
 		}
-		vpif_dbg(2, debug, "Endpoint %pOF, bus_width = %d\n",
+		dev_dbg(&pdev->dev, "Endpoint %pOF, bus_width = %d\n",
 			endpoint, bus_cfg.bus.parallel.bus_width);
 		flags = bus_cfg.bus.parallel.flags;
 
@@ -1614,11 +1604,13 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 
 		rem = of_graph_get_remote_port_parent(endpoint);
 		if (!rem) {
-			pr_err("Remote device at %pOF not found\n",
+                        dev_dbg(&pdev->dev, "Remote device at %pOF not found\n",
 				endpoint);
 			goto done;
 		}
 
+                dev_dbg(&pdev->dev, "Remote device %s, %pOF found\n",
+                        rem->name, rem);
 		sdinfo->name = rem->full_name;
 
 		pdata->asd[i] = devm_kzalloc(&pdev->dev,
