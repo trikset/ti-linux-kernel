@@ -503,6 +503,12 @@
 			backlight = <1>;
 			status = "okay";
 		};
+		display-tilcdc-legacy {
+			compatible = "hack,ili9340";
+			pinctrl-names = "default";
+			pinctrl-0 = <&lcd_tilcdc_pins>;
+			status = "disabled";
+		};
 	};
 	vbat: fixedregulator0 {
 		compatible = "regulator-fixed";
