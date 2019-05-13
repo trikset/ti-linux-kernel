@@ -380,78 +380,80 @@ static irqreturn_t vpif_channel_isr(int irq, void *dev_id)
 	struct channel_obj *ch;
 	int channel_id;
 	int fid = -1, i;
+	int status = regr(VPIF_STATUS);
 
-	channel_id = *(int *)(dev_id);
-	if (!vpif_intr_status(channel_id))
-		return IRQ_NONE;
+	if ((status  & (1 << 4)) != 0) vpif_dbg(3, debug, "ERROR ISR\n");
 
-	ch = dev->dev[channel_id];
+	if (!vpif_intr_status(1) && !vpif_intr_status(0)) return IRQ_NONE;
 
-	for (i = 0; i < VPIF_NUMBER_OF_OBJECTS; i++) {
-		common = &ch->common[i];
-		/* skip If streaming is not started in this channel */
-		/* Check the field format */
-		if (1 == ch->vpifparams.std_info.frm_fmt ||
-		    common->fmt.fmt.pix.field == V4L2_FIELD_NONE) {
-			/* Progressive mode */
-			spin_lock(&common->irqlock);
-			if (list_empty(&common->dma_queue)) {
-				spin_unlock(&common->irqlock);
-				continue;
-			}
-			spin_unlock(&common->irqlock);
+	regw(regr(VPIF_STATUS), VPIF_STATUS_CLR);
+	for (channel_id = 0; channel_id < 2; ++channel_id)
+	if ((status & (1 << channel_id)) != 0) {
+		ch = dev->dev[channel_id];
 
-			if (!channel_first_int[i][channel_id])
-				vpif_process_buffer_complete(common);
-
-			channel_first_int[i][channel_id] = 0;
-
-			vpif_schedule_next_buffer(common);
-
-
-			channel_first_int[i][channel_id] = 0;
-		} else {
-			/**
-			 * Interlaced mode. If it is first interrupt, ignore
-			 * it
-			 */
-			if (channel_first_int[i][channel_id]) {
-				channel_first_int[i][channel_id] = 0;
-				continue;
-			}
-			if (0 == i) {
-				ch->field_id ^= 1;
-				/* Get field id from VPIF registers */
-				fid = vpif_channel_getfid(ch->channel_id);
-				if (fid != ch->field_id) {
-					/**
-					 * If field id does not match stored
-					 * field id, make them in sync
-					 */
-					if (0 == fid)
-						ch->field_id = fid;
-					return IRQ_HANDLED;
-				}
-			}
-			/* device field id and local field id are in sync */
-			if (0 == fid) {
-				/* this is even field */
-				if (common->cur_frm == common->next_frm)
-					continue;
-
-				/* mark the current buffer as done */
-				vpif_process_buffer_complete(common);
-			} else if (1 == fid) {
-				/* odd field */
+		for (i = 0; i < VPIF_NUMBER_OF_OBJECTS; i++) {
+			common = &ch->common[i];
+			/* skip If streaming is not started in this channel */
+			/* Check the field format */
+			if (1 == ch->vpifparams.std_info.frm_fmt ||
+			    common->fmt.fmt.pix.field == V4L2_FIELD_NONE) {
+				/* Progressive mode */
 				spin_lock(&common->irqlock);
-				if (list_empty(&common->dma_queue) ||
-				    (common->cur_frm != common->next_frm)) {
+				if (list_empty(&common->dma_queue)) {
 					spin_unlock(&common->irqlock);
 					continue;
 				}
 				spin_unlock(&common->irqlock);
 
-				vpif_schedule_next_buffer(common);
+				if (!channel_first_int[i][channel_id]) {
+					vpif_schedule_next_buffer(common);
+					vpif_process_buffer_complete(common);
+				}
+
+				channel_first_int[i][channel_id] = 0;
+			} else {
+				/**
+				 * Interlaced mode. If it is first interrupt, ignore
+				 * it
+				 */
+				if (channel_first_int[i][channel_id]) {
+					channel_first_int[i][channel_id] = 0;
+					continue;
+				}
+				if (0 == i) {
+					ch->field_id ^= 1;
+					/* Get field id from VPIF registers */
+					fid = vpif_channel_getfid(ch->channel_id);
+					if (fid != ch->field_id) {
+						/**
+						 * If field id does not match stored
+						 * field id, make them in sync
+						 */
+						if (0 == fid)
+							ch->field_id = fid;
+						return IRQ_HANDLED;
+					}
+				}
+				/* device field id and local field id are in sync */
+				if (0 == fid) {
+					/* this is even field */
+					if (common->cur_frm == common->next_frm)
+						continue;
+
+					/* mark the current buffer as done */
+					vpif_process_buffer_complete(common);
+				} else if (1 == fid) {
+					/* odd field */
+					spin_lock(&common->irqlock);
+					if (list_empty(&common->dma_queue) ||
+					    (common->cur_frm != common->next_frm)) {
+						spin_unlock(&common->irqlock);
+						continue;
+					}
+					spin_unlock(&common->irqlock);
+
+					vpif_schedule_next_buffer(common);
+				}
 			}
 		}
 	}
@@ -974,7 +976,7 @@ static int vpif_try_fmt_vid_cap(struct file *file, void *priv,
 	struct common_obj *common = &(ch->common[VPIF_VIDEO_INDEX]);
 
 	common->fmt = *fmt;
-	vpif_update_std_info(ch);
+// 	vpif_update_std_info(ch); this is set after a call to s_dv_timings_internal in the s_fmt
 
 	pixfmt->field = common->fmt.fmt.pix.field;
 	pixfmt->colorspace = common->fmt.fmt.pix.colorspace;
@@ -1023,6 +1025,7 @@ static int vpif_g_fmt_vid_cap(struct file *file, void *priv,
 	/* By default, use currently set fmt */
 	*fmt = common->fmt;
 
+
 	/* If subdev has get_fmt, use that to override */
 	ret = v4l2_subdev_call(ch->sd, pad, get_fmt, NULL, &format);
 	if (!ret && mbus_fmt->code) {
@@ -1047,11 +1050,15 @@ static int vpif_g_fmt_vid_cap(struct file *file, void *priv,
 			mbus_fmt->code, pix_fmt->field, pix_fmt->sizeimage);
 
 		common->fmt = *fmt;
-		vpif_update_std_info(ch);
+		//vpif_update_std_info(ch);
 	}
 
 	return 0;
 }
+
+
+static int vpif_s_dv_timings_internal(struct file *file, void *priv,
+                struct v4l2_dv_timings *timings, bool check_capabilities);
 
 /**
  * vpif_s_fmt_vid_cap() - Set FMT handler
@@ -1076,9 +1083,30 @@ static int vpif_s_fmt_vid_cap(struct file *file, void *priv,
 	if (ret)
 		return ret;
 
+	struct v4l2_subdev_format subdev_format = {
+		.pad = 0,
+		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
+		.format = {
+			.width = fmt -> fmt.pix.width,
+			.height = fmt -> fmt.pix.height,
+			.code   = MEDIA_BUS_FMT_YUYV8_2X8,
+			.field = V4L2_FIELD_NONE,
+		}
+	};
+	ret = v4l2_subdev_call(ch->sd, pad, set_fmt, NULL, &subdev_format);
+	if (ret) return ret;
+	struct v4l2_dv_timings timings;
+	ret = v4l2_subdev_call(ch->sd, video, g_dv_timings, &timings);
+	if (ret) return ret;
+
+	struct v4l2_format prev_fmt = common->fmt;
 	/* store the format in the channel object */
 	common->fmt = *fmt;
-	return 0;
+
+	ret = vpif_s_dv_timings_internal(file, priv, &timings, false);
+	if (ret) common->fmt = prev_fmt;
+
+	return ret;
 }
 
 /**
@@ -1174,8 +1202,8 @@ vpif_query_dv_timings(struct file *file, void *priv,
  * @priv: file handle
  * @timings: digital video timings
  */
-static int vpif_s_dv_timings(struct file *file, void *priv,
-		struct v4l2_dv_timings *timings)
+static int vpif_s_dv_timings_internal(struct file *file, void *priv,
+		struct v4l2_dv_timings *timings, bool check_capabilities)
 {
 	struct vpif_capture_config *config = vpif_dev->platform_data;
 	struct video_device *vdev = video_devdata(file);
@@ -1183,6 +1211,7 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	struct vpif_params *vpifparams = &ch->vpifparams;
 	struct vpif_channel_config_params *std_info = &vpifparams->std_info;
 	struct common_obj *common = &ch->common[VPIF_VIDEO_INDEX];
+	struct v4l2_pix_format *pix = &common->fmt.fmt.pix;
 	struct video_obj *vid_ch = &ch->video;
 	struct v4l2_bt_timings *bt = &vid_ch->dv_timings.bt;
 	struct vpif_capture_chan_config *chan_cfg;
@@ -1194,7 +1223,7 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 
 	chan_cfg = &config->chan_config[ch->channel_id];
 	input = chan_cfg->inputs[ch->input_idx].input;
-	if (input.capabilities != V4L2_IN_CAP_DV_TIMINGS)
+	if (input.capabilities != V4L2_IN_CAP_DV_TIMINGS && check_capabilities)
 		return -ENODATA;
 
 	if (timings->type != V4L2_DV_BT_656_1120) {
@@ -1204,16 +1233,6 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 
 	if (vb2_is_busy(&common->buffer_queue))
 		return -EBUSY;
-
-	/* Configure subdevice timings, if any */
-	ret = v4l2_subdev_call(ch->sd, video, s_dv_timings, timings);
-	if (ret == -ENOIOCTLCMD || ret == -ENODEV)
-		ret = 0;
-	if (ret < 0) {
-		vpif_dbg(2, debug, "Error setting custom DV timings\n");
-		return ret;
-	}
-
 	if (!(timings->bt.width && timings->bt.height &&
 				(timings->bt.hbackporch ||
 				 timings->bt.hfrontporch ||
@@ -1230,7 +1249,8 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	/* Configure video port timings */
 
 	std_info->eav2sav = V4L2_DV_BT_BLANKING_WIDTH(bt) - 8;
-	std_info->sav2eav = bt->width;
+	if (v4l2_fourcc('N', 'V', '1', '6') != pix->pixelformat) return -EINVAL;
+	std_info->sav2eav = bt->width * 2; // TODO: bytes per pixel not 2! pix->bytesperline is incorrect here
 
 	std_info->l1 = 1;
 	std_info->l3 = bt->vsync + bt->vbackporch + 1;
@@ -1252,14 +1272,19 @@ static int vpif_s_dv_timings(struct file *file, void *priv,
 	} else {
 		std_info->l5 = std_info->vsize - (bt->vfrontporch - 1);
 	}
+
+	vpif_dbg(3, debug, "vfp %i, vsync %i, vbp %i, l1 %i, l3 %i, l5 %i\n",
+		timings->bt.vfrontporch, timings->bt.vsync, timings->bt.vbackporch,
+		std_info->l1, std_info->l3, std_info->l5);
+
 	strncpy(std_info->name, "Custom timings BT656/1120", VPIF_MAX_NAME);
 	std_info->width = bt->width;
 	std_info->height = bt->height;
 	std_info->frm_fmt = bt->interlaced ? 0 : 1;
-	std_info->ycmux_mode = 0;
+	std_info->ycmux_mode = 1;
 	std_info->capture_format = 0;
 	std_info->vbi_supported = 0;
-	std_info->hd_sd = 1;
+	std_info->hd_sd = 0;
 	std_info->stdid = 0;
 
 	vid_ch->stdid = 0;
@@ -1331,13 +1356,14 @@ static const struct v4l2_ioctl_ops vpif_ioctl_ops = {
 	.vidioc_streamon		= vb2_ioctl_streamon,
 	.vidioc_streamoff		= vb2_ioctl_streamoff,
 
+/*  TV standards are not to be used with ov7670
 	.vidioc_querystd		= vpif_querystd,
 	.vidioc_s_std			= vpif_s_std,
 	.vidioc_g_std			= vpif_g_std,
-
+*/
 	.vidioc_enum_dv_timings		= vpif_enum_dv_timings,
 	.vidioc_query_dv_timings	= vpif_query_dv_timings,
-	.vidioc_s_dv_timings		= vpif_s_dv_timings,
+//	.vidioc_s_dv_timings		= vpif_s_dv_timings,
 	.vidioc_g_dv_timings		= vpif_g_dv_timings,
 
 	.vidioc_log_status		= vpif_log_status,
@@ -1394,12 +1420,12 @@ static int vpif_async_bound(struct v4l2_async_notifier *notifier,
 
 		if (fwnode == subdev->fwnode) {
 			vpif_obj.sd[i] = subdev;
-			vpif_obj.config->chan_config->inputs[i].subdev_name =
+			vpif_obj.config->chan_config[i].inputs[0].subdev_name =
 				(char *)to_of_node(subdev->fwnode)->full_name;
 			vpif_dbg(2, debug,
 				 "%s: setting input %d subdev_name = %s\n",
 				 __func__, i,
-				vpif_obj.config->chan_config->inputs[i].subdev_name);
+				vpif_obj.config->chan_config[i].inputs[0].subdev_name);
 			return 0;
 		}
 	}
@@ -1542,16 +1568,18 @@ vpif_capture_get_pdata(struct platform_device *pdev)
 		sdinfo = &pdata->subdev_info[i];
 		chan = &pdata->chan_config[i];
 		chan->inputs = devm_kzalloc(&pdev->dev,
-					    sizeof(*chan->inputs) *
-					    VPIF_CAPTURE_NUM_CHANNELS,
+					    sizeof(*chan->inputs),
 					    GFP_KERNEL);
 		if (!chan->inputs)
 			return NULL;
 
 		chan->input_count++;
-		chan->inputs[i].input.type = V4L2_INPUT_TYPE_CAMERA;
-		chan->inputs[i].input.std = V4L2_STD_ALL;
-		chan->inputs[i].input.capabilities = V4L2_IN_CAP_STD;
+		chan->inputs[0].input.type = V4L2_INPUT_TYPE_CAMERA;
+		chan->inputs[0].input.std = 0;
+		chan->inputs[0].input.capabilities = 0; // V4L2_IN_CAP_STD;
+		char* s = "vpif capture chan 0";
+		s[strlen(s) - 1] = '0' + i;
+		strcpy(chan->inputs[0].input.name, s);
 
 		err = v4l2_fwnode_endpoint_parse(of_fwnode_handle(endpoint),
 						 &bus_cfg);

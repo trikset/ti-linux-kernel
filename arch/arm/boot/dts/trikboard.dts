@@ -161,6 +161,18 @@
 					0x30 0x00088000 0x000ff000
 				>;
 			};
+			pinctrl_reset_jvp1: pinmux_pinctrl_reset_jvp1 {
+				pinctrl-single,bits = <
+					/* GP2[1] */
+					0x18 0x08000000 0x0f000000
+				>;
+			};
+			pinctrl_reset_jvp2: pinmux_pinctrl_reset_jvp2 {
+				pinctrl-single,bits = <
+					/* GP6[13] */
+					0x34 0x00000800 0x00000f00
+				>;
+			};
 		};
 		serial0: serial@42000 {
 			status = "okay";
@@ -211,15 +223,41 @@
 		};
 		i2c0: i2c@22000 {
 			status = "okay";
-			clock-frequency = <100000>;
+			clock-frequency = <10000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c0_pins>;
+			ov7670d0: camera@21 {
+				pinctrl-names = "default";
+				/* jvp2 is channel 0, jvp1 is channel 1 ! */
+				pinctrl-0 = <&pinctrl_reset_jvp2>;
+				compatible = "ovti,ov7670";
+				reg = <0x21>;
+				reset-gpios = <&gpio GPIO_TO_PIN(6,13) GPIO_ACTIVE_LOW>;
+				port {
+					ov7670e0: endpoint {
+						remote-endpoint = <&vpif_input_ch0>;
+					};
+				};
+			};
 		};
 		i2c1: i2c@228000 {
 			status = "okay";
 			clock-frequency = <100000>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&i2c1_pins>;
+
+			ov7670d1: camera@21 {
+				pinctrl-names = "default";
+				pinctrl-0 = <&pinctrl_reset_jvp1>;
+				compatible = "ovti,ov7670";
+				reg = <0x21>;
+				reset-gpios = <&gpio GPIO_TO_PIN(2,1) GPIO_ACTIVE_LOW>;
+				port {
+					ov7670e1: endpoint {
+						remote-endpoint = <&vpif_input_ch1>;
+					};
+				};
+			};
 
 			tlv320aic3106: tlv320aic3106@18 {
 				#sound-dai-cells = <0>;
@@ -558,7 +596,38 @@
 };
 
 &vpif {
+	compatible = "ti,da850-vpif";
+	reg = <0x217000 0x1000>;
+	interrupts = <92>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&vpif_capture_pins>, <&vpif_display_pins>;
-/*	status = "okay"; */
+	pinctrl-0 = <&vpif_capture_pins>;
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <0>;
+			vpif_input_ch0: endpoint@0 {
+				reg = <0>;
+				bus-width = <8>;
+				remote-endpoint = <&ov7670e0>;
+			};
+		};
+
+		port@1 {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			reg = <1>;
+			vpif_input_ch1: endpoint@0 {
+				reg = <0>;
+				bus-width = <8>;
+				data-shift = <8>;
+				remote-endpoint = <&ov7670e1>;
+			};
+		};
+	};
 };
