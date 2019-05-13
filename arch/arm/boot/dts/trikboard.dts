@@ -173,12 +173,6 @@
                                 0x34 0x00000800 0x00000f00
                                >; 
                         }; 
-                        pinctrl_clkout: pinmux_pinctrl_clkout { 
-                                pinctrl-single,bits = <  
-                                    /* clkout */ 
-                                    0x34 0x00000010 0x000000f0
-                                >; 
-                        };
 
 
 		};
@@ -237,7 +231,7 @@
 			ov7670d0: camera@21 {
 	                        pinctrl-names = "default";
                                 /* jvp2 is channel 0, jvp1 is channel 1 ! */ 
-        	                pinctrl-0 = <&pinctrl_reset_jvp2 &pinctrl_clkout>; 
+        	                pinctrl-0 = <&pinctrl_reset_jvp2>; 
 				compatible = "ovti,ov7670";
 				reg = <0x21>;
 		  		reset-gpios = <&gpio GPIO_TO_PIN(6,13) GPIO_ACTIVE_LOW>; 
