@@ -1817,10 +1817,10 @@ static int da8xx_ili9340_lcdc_init(struct platform_device* _pdevice, struct da8x
 		goto exit_free_lcdc_irq;
 	}
 
-	par->lcdc_clk = clk_get(NULL, "my_lcdc_fck"); //   devm_clk_get(dev, "fck");
+	par->lcdc_clk = clk_get_sys("da8xx_lcdc.0", "fck");
 	if (IS_ERR(par->lcdc_clk)) {
-		dev_err(dev, "%s: cannot get LCD controller clock\n", __func__);
-		ret = -ENODEV;
+		ret = PTR_ERR(par->lcdc_clk);
+		dev_err(dev, "%s: cannot get LCD controller clock: %d\n", __func__, ret);
 		goto exit_free_lcdc_irq;
 	}
 
@@ -2173,7 +2173,12 @@ static int da8xx_ili9340_probe(struct platform_device* _pdevice)
 		_pdevice->name, _pdevice->id, _pdevice,
 		dev_name(dev), dev);
 
-	da850_trik_lcd_init();
+	ret = da850_trik_lcd_init();
+	if (ret)
+	{
+		dev_err(dev, "%s: cannot initialize lcd: %d\n", __func__, ret);
+		return ret;
+	}
 
 	info = framebuffer_alloc(sizeof(struct da8xx_ili9340_par), dev);
 	if (info == NULL) {
