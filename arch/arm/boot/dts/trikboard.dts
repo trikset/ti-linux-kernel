@@ -501,13 +501,13 @@
 			buswidth = <16>;
 			regwidth = <16>;
 			backlight = <1>;
-			status = "okay";
+			status = "disabled";
 		};
 		display-tilcdc-legacy {
 			compatible = "hack,ili9340";
 			pinctrl-names = "default";
 			pinctrl-0 = <&lcd_tilcdc_pins>;
-			status = "disabled";
+			status = "okay";
 		};
 	};
 	vbat: fixedregulator0 {
