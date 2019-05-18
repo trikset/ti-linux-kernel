@@ -173,6 +173,12 @@
 					0x34 0x00000800 0x00000f00
 				>;
 			};
+			poweroff_pin: pinmux_poweroff_pin {
+				pinctrl-single,bits = <
+					/* GP5[9] */
+					0x2c 0x08000000 0x0f000000
+				>;
+			};
 		};
 		serial0: serial@42000 {
 			status = "okay";
@@ -541,6 +547,13 @@
 		pinctrl-0 = <&wifi_wl_en_pin>;
 		gpio = <&gpio 91 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
+	};
+
+	gpio-poweroff {
+		compatible = "gpio-poweroff";
+		pinctrl-names = "default";
+		pinctrl-0 = <&poweroff_pin>;
+		gpios = <&gpio 89 GPIO_ACTIVE_LOW>;
 	};
 
 	sound {
