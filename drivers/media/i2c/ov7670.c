@@ -1762,12 +1762,14 @@ static int ov7670_probe(struct i2c_client *client,
 
 	/* Make sure it's an ov7670 */
 	ret = ov7670_detect(sd);
+#if 0
 	if (ret) {
 		v4l_dbg(1, debug, client,
 			"chip found @ 0x%x (%s) is not an ov7670 chip.\n",
 			client->addr << 1, client->adapter->name);
 		goto clk_disable;
 	}
+#endif
 	v4l_info(client, "chip found @ 0x%02x (%s)\n",
 			client->addr << 1, client->adapter->name);
 
