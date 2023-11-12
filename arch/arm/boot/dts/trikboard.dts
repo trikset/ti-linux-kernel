@@ -33,6 +33,28 @@
 		i2c2 = &i2c1;
 	};
 
+	memory {
+		device_type = "memory";
+		reg = <0xc0000000 0x08000000 0xcc000000 0x04000000>;
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		dsp_memory_region: dsp-memory@c3000000 {
+			compatible = "shared-dma-pool";
+			reg = <0xc3000000 0x1000000>;
+			reusable;
+			status = "okay";
+		};
+	};
+
+	dsp@11800000 {
+		status = "okay";
+	};
+
 	soc@1c00000 {
 		pmx_core: pinmux@14120 {
 			status = "okay";
