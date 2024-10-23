@@ -201,6 +201,38 @@
 					0x2c 0x08000000 0x0f000000
 				>;
 			};
+			trik_led_pins: pinmux_trik_led_pins {
+				pinctrl-single,bits = <
+					/* GP5[7] */
+					0x30 0x00000008 0x0000000f
+					/* GP5[8] */
+					0x2c 0x80000000 0xf0000000
+				>;
+			};
+			trik_jd1_pins: pinmux_trik_jd1_pins {
+					pinctrl-single,bits = <
+					/* GP3[2] GP3[3]*/
+					0x20 0x00880000 0x00ff0000
+					/* GP0[13] */
+					0x00 0x00000800 0x00000f00
+				>;
+			};
+			trik_jd2_pins: pinmux_trik_jd2_pins {
+					pinctrl-single,bits = <
+					/* GP3[1] GP3[5]*/
+					0x20 0x08000800 0x0f000f00
+					/* GP0[11] */
+					0x00 0x00080000 0x000f0000
+				>;
+			};
+			trik_jf1_pins: pinmux_trik_jf1_pins {
+					pinctrl-single,bits = <
+					/* GP0[8] */
+					0x00 0x80000000 0xf0000000
+					/* GP1[7] */
+					0x10 0x00000004 0x0000000f
+				>;
+			};
 		};
 		serial0: serial@42000 {
 			status = "okay";
@@ -537,6 +569,21 @@
 			pinctrl-0 = <&lcd_tilcdc_pins>;
 			status = "okay";
 		};
+		gpio-leds {
+			compatible = "gpio-leds";
+			pinctrl-names = "default";
+			pinctrl-0 = <&trik_led_pins>;
+			led_red: led_red {
+				label = "led_red";
+				gpios = <&gpio GPIO_TO_PIN(5,7) GPIO_ACTIVE_HIGH>;  /* GPIO5_7 */
+				default-state = "on";
+			};
+			led_green: led_green {
+				label = "led_green";
+				gpios = <&gpio GPIO_TO_PIN(5,8) GPIO_ACTIVE_HIGH>;  /* GPIO5_8 */
+				default-state = "on";
+			};
+		};
 	};
 	vbat: fixedregulator0 {
 		compatible = "regulator-fixed";
@@ -606,6 +653,29 @@
 			sound-dai = <&tlv320aic3106>;
 			system-clock-frequency = <24000000>;
 		};
+	};
+	trik_jd1 {
+		compatible = "trik,jd1";
+		pinctrl-names = "default";
+		pinctrl-0 = <&trik_jd1_pins>;
+		gpio-d1a = <&gpio GPIO_TO_PIN(3,3) GPIO_ACTIVE_HIGH>;
+		gpio-d1b = <&gpio GPIO_TO_PIN(3,2) GPIO_ACTIVE_HIGH>;
+		gpio-d1e = <&gpio GPIO_TO_PIN(0,13) GPIO_ACTIVE_LOW>;
+	};
+	trik_jd2 {
+		compatible = "trik,jd2";
+		pinctrl-names = "default";
+		pinctrl-0 = <&trik_jd2_pins>;
+		gpio-d1a = <&gpio GPIO_TO_PIN(3,1) GPIO_ACTIVE_HIGH>;
+		gpio-d1b = <&gpio GPIO_TO_PIN(3,5) GPIO_ACTIVE_HIGH>;
+		gpio-d1e = <&gpio GPIO_TO_PIN(0,11) GPIO_ACTIVE_LOW>;
+	};
+	trik_jf1 {
+		compatible = "trik,jf1";
+		pinctrl-names = "default";
+		pinctrl-0 = <&trik_jf1_pins>;
+		gpio-d1a = <&gpio GPIO_TO_PIN(0,8) GPIO_ACTIVE_HIGH>;
+		gpio-d1b = <&gpio GPIO_TO_PIN(1,7) GPIO_ACTIVE_HIGH>;
 	};
 };
 
