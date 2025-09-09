@@ -45,7 +45,7 @@
 
 		dsp_memory_region: dsp-memory@c3000000 {
 			compatible = "shared-dma-pool";
-			reg = <0xc3000000 0x1000000>;
+			reg = <0xc3000000 0x2000000>;
 			reusable;
 			status = "okay";
 		};
@@ -53,6 +53,7 @@
 
 	dsp@11800000 {
 		status = "okay";
+		memory-region = <&dsp_memory_region>;
 	};
 
 	soc@1c00000 {
