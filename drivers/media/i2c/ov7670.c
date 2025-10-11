@@ -1693,6 +1693,68 @@ static int ov7670_init_gpio(struct i2c_client *client, struct ov7670_info *info)
 	return 0;
 }
 
+#define ATTEMPTS_ACC_OV7670 5
+
+static ssize_t reinit_store(struct device *dev,
+                            struct device_attribute *attr,
+                            const char *buf, size_t count)
+{
+    struct i2c_client *client = to_i2c_client(dev);
+    struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct ov7670_info *info = to_state(sd);
+    int val, ret, i;
+
+    if (kstrtoint(buf, 0, &val))
+        return -EINVAL;
+
+	if (val != 1)
+        return count;
+
+	for (i = 0; i < ATTEMPTS_ACC_OV7670; i++) {
+		ret = ov7670_detect(sd);
+		if (ret == 0) {
+			dev_info(dev, "successfull detect ov7670\n");
+			break;
+		}
+		// This logic is used mostly for i2c0, i2c1 works stably.
+		if (ret == -ETIMEDOUT) {
+			/* This error is possible if there are no interruptions
+
+			1) if the SCL or SDA are held in a low state, then they will 
+			be transferred to a high state and artificial clocking of the SCL is possible.
+
+			2) Also this can happen even with the bus running normally, there may be something wrong with the slave,
+			because there are no interruptions coming from it.
+			There is just a reinit (full reset) of the i2c module */
+			dev_warn(dev, "bus froze, should already be recovered, try again\n");
+			continue;
+		}
+		if (ret == -EREMOTEIO) {
+			/* For some reason, the first time when contacting the slave after 
+			reinit the i2c module and restoring the bus,
+			the slave sends a NACK and an EREMOTEIO error arrives, but immediately after that it says it is 
+			ready, sends ARDY and send signal STOP to i2c, so try again. */
+
+			dev_warn(dev, "the device is not connected or not responding, try again\n");
+			continue;
+		}
+		if (ret < 0) {
+			dev_err(dev, "error %d ov7670 detect\n", ret);
+			return ret;
+		}
+	}
+
+	if (i == ATTEMPTS_ACC_OV7670)
+		return -ETIME;
+	
+	if (info->pclk_hb_disable)
+		ov7670_write(sd, REG_COM10, COM10_PCLK_HB);
+
+    return count;
+}
+
+static DEVICE_ATTR_WO(reinit);
+
 static int ov7670_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
@@ -1830,6 +1892,10 @@ static int ov7670_probe(struct i2c_client *client,
 	if (ret < 0)
 		goto hdl_free;
 
+	ret = device_create_file(&client->dev, &dev_attr_reinit);
+	if (ret)
+		dev_warn(&client->dev, "failed to create sysfs entry 'reinit'\n");
+
 	return 0;
 
 hdl_free:
@@ -1845,6 +1911,7 @@ static int ov7670_remove(struct i2c_client *client)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct ov7670_info *info = to_state(sd);
 
+	device_remove_file(&client->dev, &dev_attr_reinit);
 	v4l2_device_unregister_subdev(sd);
 	v4l2_ctrl_handler_free(&info->hdl);
 	clk_disable_unprepare(info->clk);
