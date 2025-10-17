@@ -1726,6 +1726,8 @@ static ssize_t reinit_store(struct device *dev,
 	if (val != 1)
         return count;
 
+	ov7670_s_power(sd, 1);
+
 	for (i = 0; i < ATTEMPTS_ACC_OV7670; i++) {
 		ret = ov7670_detect(sd);
 		if (ret == 0) {
