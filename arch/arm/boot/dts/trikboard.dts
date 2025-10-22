@@ -419,7 +419,8 @@
 			l3gd20: l3gd20@0 {
 				pinctrl-names = "default";
 				pinctrl-0 = <&gyro_pins>;
-				compatible = "st,l3gd20-gyro";
+				// may be l3gd20 or l3gd20h
+				compatible = "st,l3gd20?-gyro";
 				spi-max-frequency = <10000000>;
 				reg = <0>;
 				st,drdy-int-pin = <2>;

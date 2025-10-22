@@ -50,6 +50,11 @@ static const struct of_device_id st_gyro_of_match[] = {
 		.data = L3GD20H_GYRO_DEV_NAME,
 	},
 	{
+		// may be l3gd20 or l3gd20h
+		.compatible = "st,l3gd20?-gyro",
+		.data = L3GD20_UNKNOWN_GYRO_DEV_NAME,
+	},
+	{
 		.compatible = "st,l3g4is-gyro",
 		.data = L3G4IS_GYRO_DEV_NAME,
 	},

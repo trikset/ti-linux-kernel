@@ -367,9 +367,17 @@ int st_gyro_common_probe(struct iio_dev *indio_dev)
 	if (err)
 		return err;
 
-	err = st_sensors_check_device_support(indio_dev,
+	if (strcmp(indio_dev->name, L3GD20_UNKNOWN_GYRO_DEV_NAME) == 0) {
+		// in trik mb l3gd20 or l3gd20h, we need to detect by wai
+		err = st_sensors_detect_device_support(indio_dev,
+ 					ARRAY_SIZE(st_gyro_sensors_settings),
+ 					st_gyro_sensors_settings);
+	} else {
+		err = st_sensors_check_device_support(indio_dev,
 					ARRAY_SIZE(st_gyro_sensors_settings),
 					st_gyro_sensors_settings);
+	}
+
 	if (err < 0)
 		goto st_gyro_power_off;
 
