@@ -326,6 +326,9 @@ int st_sensors_set_fullscale_by_gain(struct iio_dev *indio_dev, int scale);
 int st_sensors_read_info_raw(struct iio_dev *indio_dev,
 				struct iio_chan_spec const *ch, int *val);
 
+int st_sensors_detect_device_support(struct iio_dev *indio_dev,
+			int num_sensors_list, const struct st_sensor_settings *sensor_settings);
+
 int st_sensors_check_device_support(struct iio_dev *indio_dev,
 	int num_sensors_list, const struct st_sensor_settings *sensor_settings);
 

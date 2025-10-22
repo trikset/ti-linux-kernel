@@ -615,6 +615,58 @@ static int st_sensors_init_interface_mode(struct iio_dev *indio_dev,
 	return 0;
 }
 
+#define TRIK_L3GD20_GYRO_DEV_NAME		"l3gd20"
+#define TRIK_L3GD20H_GYRO_DEV_NAME		"l3gd20h"
+
+// We look at the chip model via WAI and look for the right device in the array.
+int st_sensors_detect_device_support(struct iio_dev *indio_dev,
+			int num_sensors_list,
+			const struct st_sensor_settings *sensor_settings)
+{
+	int i, err = 0;
+	u8 wai;
+	struct st_sensor_data *sdata = iio_priv(indio_dev);
+
+	err = sdata->tf->read_byte(&sdata->tb, sdata->dev,
+					   ST_SENSORS_DEFAULT_WAI_ADDRESS, &wai);
+	if (err < 0) {
+		dev_err(&indio_dev->dev,
+			"failed to read Who-Am-I register.\n");
+		return err;
+	}
+
+	for (i = 0; i < num_sensors_list; i++) {
+		if (sensor_settings[i].wai == wai) {
+			break;
+		}
+	}
+	if (i == num_sensors_list) {
+		dev_err(&indio_dev->dev, "WhoAmI (0x%x) device is not supported.\n",
+							wai);
+		return -ENODEV;
+	}
+
+	// this set name correct for TRIK with `l3gd20` or `l3gd20h` gyro on the board, 
+	// else name will be `l3gd20?`
+	// for other gyro models set correct compatible in device tree
+	if (wai == 0xd4) {
+		indio_dev->name = TRIK_L3GD20_GYRO_DEV_NAME;
+	} else if (wai == 0xd7) {
+		indio_dev->name = TRIK_L3GD20H_GYRO_DEV_NAME;
+	}
+
+	err = st_sensors_init_interface_mode(indio_dev, &sensor_settings[i]);
+	if (err < 0)
+		return err;
+
+	sdata->sensor_settings =
+			(struct st_sensor_settings *)&sensor_settings[i];
+
+	return i;
+}
+EXPORT_SYMBOL(st_sensors_detect_device_support);
+
+
 int st_sensors_check_device_support(struct iio_dev *indio_dev,
 			int num_sensors_list,
 			const struct st_sensor_settings *sensor_settings)
