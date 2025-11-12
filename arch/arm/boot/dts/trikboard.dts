@@ -362,7 +362,13 @@
 			pinctrl-0 = <&mmc0_pins>;
 		};
 		mmc1: mmc@21b000 {
-			max-frequency = <24000000>;
+			// By searching, found out that wi-fi is stable 
+			// at 3 MHz frequency of the SDIO bus.
+
+			// In general, it is possible to set up to 19 MHz max, 
+			// but it will be possible to connect at shorter distances.
+			// The problem applies when the processor frequency is 456 MHz.
+			max-frequency = <3000000>;
 			bus-width = <4>;
 			status = "okay";
 			pinctrl-names = "default";
