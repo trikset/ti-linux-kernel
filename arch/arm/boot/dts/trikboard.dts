@@ -20,14 +20,9 @@
 	compatible = "ctl,trikboard", "ti,da850";
 	model = "TRIKBOARD";
 
-	chosen {
-		stdout-path = &serial1;
-	};
-
 	aliases {
 		serial0 = &serial0;
 		serial1 = &serial1;
-		serial2 = &serial2;
 		spi0 = &spi0;
 		i2c1 = &i2c0;
 		i2c2 = &i2c1;
@@ -243,9 +238,6 @@
 			};
 		};
 		serial1: serial@10c000 {
-			status = "okay";
-		};
-		serial2: serial@10d000 {
 			status = "okay";
 		};
 		ehrpwm0: pwm@300000 {
