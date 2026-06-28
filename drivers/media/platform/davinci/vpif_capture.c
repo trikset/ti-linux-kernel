@@ -1497,6 +1497,8 @@ static int vpif_probe_complete(void)
 		vdev->vfl_dir = VFL_DIR_RX;
 		vdev->queue = q;
 		vdev->lock = &common->lock;
+		if (ch->sd && ch->sd->ctrl_handler)
+			vdev->ctrl_handler = ch->sd->ctrl_handler;
 		video_set_drvdata(&ch->video_dev, ch);
 		err = video_register_device(vdev,
 					    VFL_TYPE_GRABBER, (j ? 1 : 0));

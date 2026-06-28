@@ -190,6 +190,10 @@ enum v4l2_colorfx {
  * We reserve 16 controls for this driver. */
 #define V4L2_CID_USER_IMX_BASE			(V4L2_CID_USER_BASE + 0x1090)
 
+/* The base for the OmniVision OV7670 driver controls.
+ * We reserve 16 controls for this driver. */
+#define V4L2_CID_USER_OV7670_BASE		(V4L2_CID_USER_BASE + 0x10a0)
+
 /* MPEG-class control IDs */
 /* The MPEG controls are applicable to all codec controls
  * and the 'MPEG' part of the define is historical */

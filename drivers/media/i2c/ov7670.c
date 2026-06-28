@@ -77,6 +77,12 @@ MODULE_PARM_DESC(debug, "Debug level (0-1)");
 #define	  COM7_YUV	  0x00	  /* YUV */
 #define	  COM7_BAYER	  0x01	  /* Bayer format */
 #define	  COM7_PBAYER	  0x05	  /* "Processed bayer" */
+#define REG_AWB_CTRL	0x6f	/* AWB algorithm select: 0x9f=simple, 0x9e=advanced */
+#define   AWB_CTRL_SIMPLE   0x9f
+#define   AWB_CTRL_ADVANCED 0x9e
+
+#define V4L2_CID_OV7670_AWB_ADVANCED (V4L2_CID_USER_OV7670_BASE + 0)
+
 #define REG_COM8	0x13	/* Control 8 */
 #define   COM8_FASTAEC	  0x80	  /* Enable fast AGC/AEC */
 #define   COM8_AECSTEP	  0x40	  /* Unlimited AEC step size */
@@ -231,6 +237,13 @@ struct ov7670_info {
 		struct v4l2_ctrl *saturation;
 		struct v4l2_ctrl *hue;
 	};
+	struct {
+		/* white balance cluster */
+		struct v4l2_ctrl *auto_white_balance;
+		struct v4l2_ctrl *blue_balance;
+		struct v4l2_ctrl *red_balance;
+	};
+	struct v4l2_ctrl *awb_advanced;
 	struct ov7670_format_struct *fmt;  /* Current format */
 	struct ov7670_win_size* wsize;
 	struct clk *clk;
@@ -1530,6 +1543,41 @@ static int ov7670_s_exp(struct v4l2_subdev *sd, int value)
 }
 
 /*
+ * White balance: AWB flag in COM8, manual gains in REG_BLUE / REG_RED.
+ */
+static int ov7670_s_auto_white_balance(struct v4l2_subdev *sd, int value)
+{
+	int ret;
+	unsigned char com8;
+
+	ret = ov7670_read(sd, REG_COM8, &com8);
+	if (ret == 0) {
+		if (value)
+			com8 |= COM8_AWB;
+		else
+			com8 &= ~COM8_AWB;
+		ret = ov7670_write(sd, REG_COM8, com8);
+	}
+	return ret;
+}
+
+static int ov7670_s_blue_balance(struct v4l2_subdev *sd, int value)
+{
+	return ov7670_write(sd, REG_BLUE, (unsigned char)value);
+}
+
+static int ov7670_s_red_balance(struct v4l2_subdev *sd, int value)
+{
+	return ov7670_write(sd, REG_RED, (unsigned char)value);
+}
+
+static int ov7670_s_awb_advanced(struct v4l2_subdev *sd, int value)
+{
+	return ov7670_write(sd, REG_AWB_CTRL,
+			    value ? AWB_CTRL_ADVANCED : AWB_CTRL_SIMPLE);
+}
+
+/*
  * Tweak autoexposure.
  */
 static int ov7670_s_autoexp(struct v4l2_subdev *sd,
@@ -1595,6 +1643,18 @@ static int ov7670_s_ctrl(struct v4l2_ctrl *ctrl)
 			return ov7670_s_exp(sd, info->exposure->val);
 		}
 		return ov7670_s_autoexp(sd, ctrl->val);
+	case V4L2_CID_AUTO_WHITE_BALANCE:
+		/* When disabling AWB, push manual balances and then clear the bit. */
+		if (!ctrl->val) {
+			int ret;
+			ret = ov7670_s_blue_balance(sd, info->blue_balance->val);
+			ret += ov7670_s_red_balance(sd, info->red_balance->val);
+			if (ret)
+				return ret;
+		}
+		return ov7670_s_auto_white_balance(sd, ctrl->val);
+	case V4L2_CID_OV7670_AWB_ADVANCED:
+		return ov7670_s_awb_advanced(sd, ctrl->val);
 	}
 	return -EINVAL;
 }
@@ -1602,6 +1662,17 @@ static int ov7670_s_ctrl(struct v4l2_ctrl *ctrl)
 static const struct v4l2_ctrl_ops ov7670_ctrl_ops = {
 	.s_ctrl = ov7670_s_ctrl,
 	.g_volatile_ctrl = ov7670_g_volatile_ctrl,
+};
+
+static const struct v4l2_ctrl_config ov7670_awb_advanced_ctrl = {
+	.ops  = &ov7670_ctrl_ops,
+	.id   = V4L2_CID_OV7670_AWB_ADVANCED,
+	.name = "AWB Advanced Algorithm",
+	.type = V4L2_CTRL_TYPE_BOOLEAN,
+	.min  = 0,
+	.max  = 1,
+	.step = 1,
+	.def  = 0,
 };
 
 #ifdef CONFIG_VIDEO_ADV_DEBUG
@@ -1768,6 +1839,11 @@ static ssize_t reinit_store(struct device *dev,
 	if (info->pclk_hb_disable)
 		ov7670_write(sd, REG_COM10, COM10_PCLK_HB);
 
+	// reinit is called on camera start from userspace (fix for i2c bus issue on hot-plug).
+	// It resets registers, so handler values must be restored
+	// in case the user modified them via v4l2-ctl.
+	v4l2_ctrl_handler_setup(&info->hdl);
+
     return count;
 }
 
@@ -1869,7 +1945,7 @@ static int ov7670_probe(struct i2c_client *client,
 	if (info->pclk_hb_disable)
 		ov7670_write(sd, REG_COM10, COM10_PCLK_HB);
 
-	v4l2_ctrl_handler_init(&info->hdl, 10);
+	v4l2_ctrl_handler_init(&info->hdl, 14);
 	v4l2_ctrl_new_std(&info->hdl, &ov7670_ctrl_ops,
 			V4L2_CID_BRIGHTNESS, 0, 255, 1, 128);
 	v4l2_ctrl_new_std(&info->hdl, &ov7670_ctrl_ops,
@@ -1891,6 +1967,14 @@ static int ov7670_probe(struct i2c_client *client,
 	info->auto_exposure = v4l2_ctrl_new_std_menu(&info->hdl, &ov7670_ctrl_ops,
 			V4L2_CID_EXPOSURE_AUTO, V4L2_EXPOSURE_MANUAL, 0,
 			V4L2_EXPOSURE_AUTO);
+	info->auto_white_balance = v4l2_ctrl_new_std(&info->hdl, &ov7670_ctrl_ops,
+			V4L2_CID_AUTO_WHITE_BALANCE, 0, 1, 1, 1);
+	info->blue_balance = v4l2_ctrl_new_std(&info->hdl, &ov7670_ctrl_ops,
+			V4L2_CID_BLUE_BALANCE, 0, 255, 1, 0x40);
+	info->red_balance = v4l2_ctrl_new_std(&info->hdl, &ov7670_ctrl_ops,
+			V4L2_CID_RED_BALANCE, 0, 255, 1, 0x60);
+	info->awb_advanced = v4l2_ctrl_new_custom(&info->hdl,
+			&ov7670_awb_advanced_ctrl, NULL);
 	sd->ctrl_handler = &info->hdl;
 	if (info->hdl.error) {
 		ret = info->hdl.error;
@@ -1905,6 +1989,7 @@ static int ov7670_probe(struct i2c_client *client,
 	v4l2_ctrl_auto_cluster(2, &info->auto_exposure,
 			       V4L2_EXPOSURE_MANUAL, false);
 	v4l2_ctrl_cluster(2, &info->saturation);
+	v4l2_ctrl_auto_cluster(3, &info->auto_white_balance, 0, false);
 	v4l2_ctrl_handler_setup(&info->hdl);
 
 	ret = v4l2_async_register_subdev(&info->sd);
